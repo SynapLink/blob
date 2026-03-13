@@ -158,16 +158,14 @@ async function fetchRecentPastes() {
             
             const tr = document.createElement('tr');
             
-            // Replicate Doxbin structure: Title, Comments, Views, Created by, Added
+            // Replicate table structure: Title, Comments, Views, Created by, Added
             const isEncFile = file.name.endsWith('.enc');
             const iconHTML = isEncFile ? '<i class="fas fa-lock" style="margin-right: 5px;"></i>' : '';
-            const comments = Math.floor(Math.random() * 20);
-            const views = Math.floor(Math.random() * 5000);
             
             tr.innerHTML = `
                 <td><a href="/paste.html?id=${file.name}">${iconHTML}${file.name}</a></td>
-                <td>${comments}</td>
-                <td>${views}</td>
+                <td>-</td>
+                <td>-</td>
                 <td>Anonymous</td>
                 <td>Today</td>
             `;
