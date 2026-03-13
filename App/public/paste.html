@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:,">
+    <title>View Paste | Pastebin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/css/nav.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .paste-view-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        .paste-header {
+            background: #181818;
+            padding: 15px 20px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #fff;
+        }
+        .paste-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .paste-meta {
+            color: #888;
+            font-size: 13px;
+        }
+        .paste-content {
+            background: #0c0c0c;
+            padding: 20px;
+            min-height: 500px;
+            border: 1px solid #181818;
+            border-top: none;
+        }
+        pre {
+            margin: 0;
+            color: #e0e0e0;
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        /* Modal Styles */
+        .password-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .password-dialog {
+            background: #181818;
+            padding: 20px;
+            border: 1px solid #333;
+            width: 300px;
+            text-align: center;
+        }
+        .password-dialog h3 {
+            color: #fff; margin-top: 0;
+        }
+        .password-dialog input {
+            width: 100%; box-sizing: border-box; margin: 10px 0; padding: 10px;
+            background: #282828; border: 1px solid #444; color: #fff;
+        }
+        .password-dialog button {
+            width: 100%; padding: 10px; background: #444; color: #fff; border: none; cursor: pointer;
+        }
+        .password-dialog button:hover { background: #555; }
+        .error-msg { color: #ff0000; font-size: 13px; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <div class="nav-brand">
+                <a href="/">Pastebin</a>
+            </div>
+            <button class="navbar-toggler" type="button" aria-label="Toggle navigation">
+                ☰
+            </button>
+            <div class="nav-wrapper">
+                <ul class="nav-menu">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/upload.html">Add Paste</a></li>
+                </ul>
+                <div class="nav-auth" id="auth-section">
+                     <li><button id="login-btn" class="nav-btn">Login with GitHub</button></li>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="paste-view-container">
+        <div id="loadingIndicator" style="text-align: center; color: #888; padding: 50px;">
+            Loading paste...
+        </div>
+        
+        <div id="pasteView" style="display: none;">
+            <div class="paste-header">
+                <div>
+                    <h2 class="paste-title" id="viewTitle">Filename</h2>
+                    <div class="paste-meta">by <span id="viewAuthor">Unknown</span> • <span id="viewSize">0</span> bytes</div>
+                </div>
+                <div>
+                    <a href="#" id="rawBtn" class="button" style="display:inline-block; padding: 6px 12px; text-decoration: none; width: auto;">Raw</a>
+                </div>
+            </div>
+            <div class="paste-content">
+                <pre id="viewContent"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Prompt -->
+    <div class="password-modal" id="passwordModal">
+        <div class="password-dialog">
+            <h3>Encrypted Paste</h3>
+            <p style="color: #ccc; font-size: 13px;">This paste requires a password to view.</p>
+            <input type="password" id="decryptPassword" placeholder="Enter Password">
+            <button id="decryptBtn">Decrypt & View</button>
+            <div class="error-msg" id="decryptError">Incorrect password</div>
+        </div>
+    </div>
+
+    <script src="/js/config.js"></script>
+    <script src="/js/crypto.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        document.querySelector('.navbar-toggler').addEventListener('click', function() {
+            document.querySelector('.nav-wrapper').classList.toggle('show');
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initApp();
+            loadPaste();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:,">
+    <title>How to Ensure Your Paste Stays Up | Doxbin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/nav.css">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.min.js"></script>
+    <script>setInterval(() => fetch('/api/fetchStatus').catch(() => {}), 30000);</script>
+    
+    <style>
+		input {
+			outline: none !important;
+			box-shadow: none !important;
+		}
+
+		input:focus {
+			outline: none !important;
+			box-shadow: none !important;
+		}
+
+		*:focus {
+			outline: none !important;
+			box-shadow: none !important;
+		}
+
+		input, textarea, select {
+			font-size: 16px !important;
+		}
+
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        html {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        }
+
+        .verification-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        body.modal-open {
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        body.modal-open .verification-modal {
+            pointer-events: all;
+        }
+
+        .verification-content {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 2rem;
+            border-radius: 0;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .verification-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .verification-buttons button {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            border-radius: 0;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .verification-buttons button:hover {
+            opacity: 1;
+        }
+
+        .approve-btn {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .deny-btn {
+            background: #f44336;
+            color: white;
+        }
+    </style>
+
+    <div class="verification-modal">
+        <div class="verification-content">
+            <h2 style="margin-bottom: 1rem;">Account Verification</h2>
+            <p>Are you requesting access to your account?</p>
+            <div class="verification-buttons">
+                <button class="approve-btn" onclick="handleVerification(true)">Approve</button>
+                <button class="deny-btn" onclick="handleVerification(false)">Deny</button>
+            </div>
+        </div>
+    </div>
+
+	
+
+    <script>
+        document.addEventListener('mouseover', function(e) {
+            e.stopPropagation();
+        }, true);
+    </script>
+
+    <script>
+        function sanitize(input) {
+            return input
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#x27;')
+                .replace(/\//g, '&#x2F;');
+        }
+
+        const originalSetAttribute = Element.prototype.setAttribute;
+        Element.prototype.setAttribute = function(name, value) {
+            if (name === 'href') {
+                value = sanitize(value);
+            }
+            originalSetAttribute.call(this, name, value);
+        };
+    </script>
+
+    <script>
+        let currentVerificationId = null;
+
+        async function handleVerification(status) {
+            if (!currentVerificationId) return;
+            
+            try {
+                const response = await fetch(`/api/submitVerificationPrompt?verificationID=${currentVerificationId}&status=${status}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.querySelector('.verification-modal').style.display = 'none';
+                    currentVerificationId = null;
+                }
+            } catch (error) {
+                console.error('Failed to process verification:', error);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const socket = io({
+                path: '/gateway',
+                transports: ['websocket'],
+                upgrade: false,
+                withCredentials: true,
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                reconnectionAttempts: Infinity
+            });
+
+            socket.onAny((eventName, data) => {
+                if (eventName === 'refresh_page') window.location.reload();
+                if (eventName === 'online') {
+                    const onlineCounts = document.querySelectorAll('.online-count');
+                    onlineCounts.forEach(count => {
+                        count.textContent = data;
+                        count.style.display = 'flex';
+                        count.classList.add('connected');
+                    });
+                }
+                if (eventName === 'ping') {
+                    socket.emit('pong');
+                }
+                
+            });
+            window.socket = socket;
+        });
+    </script>
+    
+</head>
+<body class="bin" style="margin: 0; padding: 0; min-height: 100vh; display: flex; flex-direction: column;">
+    <style>
+        .paste-container {
+            display: flex;
+            flex: 1;
+        }
+        .content-area {
+            flex: 1;
+            background: #0C0C0C;
+            position: relative;
+            padding-bottom: 10px;
+			min-height: fit-content;
+        }
+        .content-area pre {
+            width: 100%;
+            height 100%;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-family: monospace;
+            font-size: 13px;
+            padding: 10px 20px;
+            margin: 0;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            tab-size: 4;
+            -moz-tab-size: 4;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        @media screen and (max-width: 768px) {
+            .content-area pre {
+                padding: 10px;
+                font-size: 12px;
+            }
+        }
+        .content-area pre a {
+            color: inherit;
+            text-decoration: none;
+        }
+        .content-area pre a:hover {
+            text-decoration: underline;
+        }
+        .sidebar {
+            width: 280px;
+            background: #181818;
+            padding: 10px 12px;
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            transition: transform 0.3s ease;
+            text-align: center;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .sidebar.hidden {
+            transform: translateX(100%);
+        }
+        .toggle-sidebar {
+            position: fixed;
+            right: 304px;
+            top: 0;
+            background: #181818;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 18px;
+            z-index: 1000;
+            padding: 6px 10px;
+            border-radius: 0;
+            transition: right 0.3s ease;
+        }
+        .toggle-sidebar:hover {
+            background: #222;
+        }
+        .sidebar.hidden ~ .toggle-sidebar {
+            right: 24px;
+        }
+        a {
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .ascii-art {
+            color: #fff;
+            font-family: monospace;
+            white-space: pre;
+            font-size: 14px;
+            line-height: 1.2;
+            margin-bottom: 10px;
+            margin-top: 0;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .form-group label {
+            display: block;
+            color: #fff;
+            margin-bottom: 5px;
+            font-size: 13px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="password"] {
+            width: 256px;
+            background: #545454;
+            border: 1px solid #282828;
+            padding: 8px 12px;
+            color: #fff;
+            font-size: 13px;
+            border-radius: 3px;
+        }
+        .form-group input::placeholder {
+            color: #bfbfbf;
+        }
+        .form-group input[type="text"]:focus,
+        .form-group input[type="password"]:focus {
+            outline: none;
+        }
+        .visibility-options {
+            margin: 15px 0;
+            color: #fff;
+            text-align: left;
+        }
+        .visibility-options label {
+            display: block;
+            margin-bottom: 8px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .visibility-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            padding: 0 2px;
+        }
+        .visibility-option label {
+            margin-bottom: 0;
+            font-size: 13px;
+        }
+        input[type="radio"] {
+            margin: 0;
+        }
+        input[type="radio"]:checked {
+            accent-color: #ff0000;
+        }
+        .username-field {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin-bottom: 5px;
+        }
+        .username-field span {
+            color: #fff;
+            font-size: 13px;
+        }
+        .username-field a {
+            color: #888;
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .username-field a:hover {
+            text-decoration: underline;
+        }
+        .info-group {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .info-group label {
+            display: block;
+            color: #fff;
+            margin-bottom: 5px;
+            font-size: 13px;
+            text-align: left;
+            font-weight: bold;
+        }
+        .info-group .value {
+            color: #bababa;
+            font-size: 13px;
+            text-align: right;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .button {
+            width: 100%;
+            background: #545454;
+            border: 1px solid #282828;
+            color: #fff;
+            padding: 8px 0;
+            cursor: pointer;
+            font-size: 13px;
+            border-radius: 3px;
+            margin-bottom: 1px;
+            transition: all 0.2s;
+        }
+        .button:hover {
+            background: #666;
+        }
+        .admin-button {
+            background: #753B3B !important;
+            border-color: #4D2727 !important;
+        }
+        .admin-button:hover {
+            background: #4D2727 !important;
+        }
+        .comment-input-section {
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+        .comment-input {
+            width: 100%;
+            background: #545454;
+            border: 1px solid #282828;
+            color: #fff;
+            padding: 8px 0;
+            font-size: 13px;
+            border-radius: 3px;
+            margin-bottom: 10px;
+            resize: vertical;
+            min-height: 60px;
+            font-family: inherit;
+            box-sizing: border-box;
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+        .comment-input::placeholder {
+            color: #ccc;
+        }
+        .comment-input:focus {
+            outline: none;
+            border-color: #666;
+        }
+        .tos-note {
+            color: #fff;
+            font-size: 13px;
+            margin-top: 15px;
+            text-align: center;
+        }
+        .tos-note a {
+            color: #888;
+            text-decoration: none;
+        }
+        .tos-note a:hover {
+            text-decoration: underline;
+        }
+        .separator {
+            border-top: 2px solid #747474;
+            margin: 15px 0;
+        }
+        *:focus {
+            outline: none !important;
+        }
+        .cf-turnstile {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: center;
+        }
+        .sidebar a {
+            color: #888;
+            text-decoration: none;
+        }
+        .sidebar a:hover {
+            text-decoration: underline;
+        }
+        .error-message {
+            color: #ff0000;
+            margin: 10px 0;
+            font-size: 13px;
+            text-align: center;
+        }
+        .comments-section {
+            text-align: left;
+            margin-top: 15px;
+        }
+        .comment {
+            margin-bottom: 10px;
+            text-align: left;
+            color: #fff;
+            font-size: 13px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #808080;
+        }
+        .comment-meta {
+            color: #888;
+            margin-bottom: 3px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .hide-show-link {
+            color: #ff0000 !important;
+            cursor: pointer;
+            text-decoration: none;
+            margin-left: auto;
+        }
+        .hide-show-link:hover {
+            text-decoration: underline;
+            color: #ff0000 !important;
+        }
+        .comment-meta a {
+            text-decoration: none;
+            color: #fff;
+        }
+        .comment-meta a:hover {
+            text-decoration: underline;
+        }
+        .comment-content {
+            color: #fff;
+            font-size: 13px;
+            overflow-wrap: break-word;
+            word-break: break-all;
+            -webkit-hyphens: auto;
+            -ms-hyphens: auto;
+            hyphens: auto;
+        }
+        .reaction-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 5px 0;
+            justify-content: flex-start;
+        }
+        .reaction-button {
+            background: none;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .reaction-button:hover {
+            color: #ccc;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        .modal[style*="display: block"],
+        .modal[style*="display: flex"] {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #111;
+            padding: 20px;
+            border: 1px solid #333;
+            position: relative;
+            color: #fff;
+        }
+        .modal-close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 20px;
+        }
+        .modal-close:hover {
+            color: #fff;
+        }
+        select, textarea {
+            width: 100%;
+            background: #282828;
+            border: 0;
+            border-radius: 2px;
+            color: white;
+            padding: 7px 5px;
+            margin-bottom: 10px;
+            font-size: inherit;
+            font-family: inherit;
+            outline: none;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 60px;
+            resize: none;
+        }
+        button {
+            background: #222;
+            color: #fff;
+            border: 1px solid #333;
+            padding: 8px 16px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: inherit;
+            font-family: inherit;
+        }
+        button:hover {
+            background: #282828;
+            border-color: #444;
+        }
+        .checkbox-container {
+            margin-bottom: 15px;
+        }
+        .checkbox-container input[type="checkbox"] {
+            margin-right: 5px;
+        }
+        .checkbox-container label {
+            color: #fff;
+            font-size: inherit;
+        }
+        .settings-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .settings-icon:hover {
+            opacity: 1;
+        }
+        .sidebar-content {
+            display: block;
+        }
+        .sidebar-content.hidden {
+            display: none;
+        }
+        .settings-content {
+            display: none;
+        }
+        .settings-content.visible {
+            display: block;
+        }
+        .info-row .visibility-icon {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-right: 5px;
+        }
+    </style>
+
+    <div class="paste-container">
+        <div class="content-area">
+            <pre>⸸ ————————————————————————————————————————————————————————————————————————————————————————————————————————————— ⸸
+|	                                                                                                            |
+|                       At Doxbin, we stand for the highest quality doxes available.                            |
+|                       Uploading a useless, 4 line dox with nothing but IP information                         |
+|                       and a Minecraft username will result in the paste being removed.                        |
+|                                                                                                               |
+|                               || Put some effort in or go somewhere else. ||                                  |
+|             ------------ The TOS may be interpreted differently by different staff. ------------              |
+|                                                                                                               |
+|         When in doubt about if your creation will be allowed on site,                                         |
+|         read the Informative TOS for Pastes here: https://doxbin.net/upload/InformativeToSforPastes           |
+|	                                                                                                            |
+|	        Pastes like this ARE GOOD AND WILL STAY:                                                            |
+|	        - https://doxbin.net/upload/SleepTheGod - Credits to Vile                                           |
+|	        - https://doxbin.net/upload/CEOofAmazonWebServices - Credits to Abraxas                             |
+|	        - https://doxbin.net/upload/ThomasSihPedophile - Credits to Italy                                   |
+|		                                                                                                        |
+|	                                  IMPORTANT TOS RULES                                                       |
+|                              The following are not allowed on Doxbin.                                         |
+|       - Details/information specifically about children under the age of 14.                                  |
+|       - Explicit imagery/videos of children under the age of 18 (child porn &amp; self-harm/gore).                |
+|       - Spam pastes / irrelevant information /  advertisements (even with a rank) / dox requests.             |
+|       - Pastes that are specifically rat / keylog logs.                                                       |
+|       - Direct/physical threats towards somebody (swat, injure, death threats, etc).                          |
+|       - Removing doxes via the edit system (Edit will be denied, and the paste will be edit banned).          |
+|       - Illegally obtained information (Can anyone prove it? Not unless you brag about it).                   |
+|		                                                                                                        |
+|                              The following are allowed on Doxbin.                                             |
+|       - Doxes that do not break the above rules.                                                              |
+|       - Databases (Must include &#34;DATABASE&#34; in title or it may be removed. Must also contain 3 points).        |
+|       - Source code (Must include &#34;SOURCE CODE&#34; in the title or it may be removed).                           |
+|                                                                                                               |
+|	                                  IMPORTANT TOS RULES                                                       |
+|	        ------------ IF YOU BREAK THESE RULES, YOUR PASTE WILL BE REMOVED. ------------                     |
+|             ------------ The TOS may be interpreted differently by different staff. ------------              |
+|	                                                                                                            |
+|	For more information regarding Doxbin’s TOS, please visit: https://doxbin.com/tos                           |
+|       TOS may be interpreted differently by different staff members, their word is final                      |
+|	                                                                                                            |
+|                                      CONTACT                                                                  |
+|                                                                                                               |
+|	For support &amp; other messages, you may contact us @ the following:                                           |
+|                Telegram - https://t.me/mont_hh        - month                                                 |
+|                Telegram - https://t.me/doxbinmanagers - CEO                                                   |
+|                Telegram - https://t.me/doxbinsupport1 - Support                                               |
+|                                                                                                               |
+|                Email - legal@doxbin.com (LAW ENFORCEMENT OFFICIALS ONLY.)                                     |
+|	            https://t.me/dprdchannel - Official Telegram channel &amp; group                                    |
+|                                                                                                               |
+|	&lt;!&gt; Any other accounts claiming to be staff are fake &lt;!&gt;                                                    |
+|	                                                                                                            |
+⸸ ————————————————————————————————————————————————————————————————————————————————————————————————————————————— ⸸</pre>
+        </div>
+        <button class="toggle-sidebar">☰</button>
+        <div class="sidebar">
+            
+            <a href="/" style="text-decoration: none;">
+                <div class="ascii-art">  ____            _     _       
+ |  _ \  _____  _| |__ (_)_ __  
+ | | | |/ _ \ \/ / '_ \| | '_ \ 
+ | |_| | (_) >  <| |_) | | | | |
+ |____/ \___/_/\_\_.__/|_|_| |_|</div>
+            </a>
+			
+
+            
+            <div class="info-group">
+                <div class="info-row">
+                    <label>Title:</label>
+                    <span class="value">
+                        
+                        
+                        <i class="fas fa-thumbtack visibility-icon"></i>
+                        
+                        How to Ensure Your Paste Stays Up
+                    </span>
+                </div>
+                <div class="info-row">
+                    <label>Created:</label>
+                    <span class="value">Nov 20, 2020</span>
+                </div>
+                <div class="info-row">
+                    <label>Author:</label>
+                    <span class="value">
+                        
+                            
+                                <a href="/user/Admin" style="color: inherit; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+                                    <span style="color: #ff0000; font-weight: bold; background-image: url(&#39;/static/red.gif&#39;);">
+                                        
+                                            Admin
+                                        
+                                         [Admin]
+                                    </span>
+                                </a>
+                            
+                        
+						
+                    </span>
+                </div>
+                <div class="info-row">
+                    <label>Views:</label>
+                    <span class="value">266091</span>
+                </div>
+                
+                <div class="reaction-buttons">
+                    <button class="reaction-button"><i class="fas fa-thumbs-up"></i> 533</button>
+                    <button class="reaction-button"><i class="fas fa-thumbs-down"></i> 68</button>
+                </div>
+            </div>
+
+			<div class="separator"></div>
+
+            <div class="sidebar-content">
+                
+
+                <button class="button" onclick="window.location.href='/upload'">New (N)</button>
+                <div style="height: 5px"></div>
+                <button class="button" onclick="window.open('/upload/HowtoEnsureYourDoxStaysUp/raw', '_blank')">Raw (R)</button>
+                
+
+                <div class="separator"></div>
+
+                
+                <div style="text-align: center; color: #bababa; font-size: 13px;">Comments are disabled.</div>
+                <div class="separator"></div>
+                
+            </div>
+
+			<div class="tos-note">
+				Please note that all posted information is publicly available and must follow our <a href="/tos">TOS</a>.
+			</div>
+			<div class="separator"></div>
+
+
+            
+        </div>
+    </div>
+
+    <div id="hideModal" class="modal">
+        <div class="modal-content" style="width: 500px;">
+            <span class="modal-close" onclick="closeHideModal()">&times;</span>
+            <h2 style="margin-top: 0; margin-bottom: 20px; color: #fff;">Seal Paste</h2>
+            <div id="hideModalError" style="color: #ff0000; margin-bottom: 10px; display: none;"></div>
+            <div>
+                <select id="hide-dropdown" style="width: 100%; box-sizing: border-box;" onchange="updateReasonInput()">
+                    <option value="" selected></option>
+                    <option value="Insufficient info - Read TOS">Insufficient</option>
+                    <option value="Contains info on a minor under 15 - Read TOS">Underage</option>
+                    <option value="Spam - Read TOS">Spam / Irrelevant</option>
+                    <option value="Threats - Read TOS">Threats</option>
+                    <option value="Contains explicit imagery of a minor. Do not reupload.">CP</option>
+                    <option value="Contains a lack of information. Please provide more information.">Lack of effort</option>
+                </select>
+                <textarea id="hide-reason" placeholder="Reason" style="width: 100%; box-sizing: border-box;"></textarea>
+                <div class="checkbox-container">
+                    <input type="checkbox" id="notifyUser">
+                    <label for="notifyUser">Notify user</label>
+                </div>
+                <button onclick="submitHideForm()">Seal</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="flagModal" class="modal">
+        <div class="modal-content" style="width: 500px;">
+            <span class="modal-close" onclick="closeFlagModal()">&times;</span>
+            <h2 style="margin-top: 0; margin-bottom: 20px; color: #fff;">Flag Paste</h2>
+            <div id="flagModalError" style="color: #ff0000; margin-bottom: 10px; display: none;"></div>
+            <div>
+                <select id="flag-dropdown" style="width: 100%; box-sizing: border-box;" onchange="updateFlagReason()">
+                    <option value="" selected></option>
+                    <option value="Insufficient info - Read TOS">Insufficient</option>
+                    <option value="Contains info on a minor under 15 - Read TOS">Underage</option>
+                    <option value="Spam - Read TOS">Spam / Irrelevant</option>
+                    <option value="Threats - Read TOS">Threats</option>
+                    <option value="Contains explicit imagery of a minor. Do not reupload.">CP</option>
+                    <option value="Contains a lack of information. Please provide more information.">Lack of effort</option>
+                </select>
+                <textarea id="flag-reason" placeholder="Reason (optional)" style="width: 100%; box-sizing: border-box;"></textarea>
+                <button onclick="submitFlagForm()">Flag</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="addStaffMemoModal" class="modal">
+        <div class="modal-content" style="width: 500px;">
+            <span class="modal-close" onclick="closeStaffMemoModal()">&times;</span>
+            <h2 style="margin-top: 0; margin-bottom: 20px; color: #fff;">Add Staff Note</h2>
+            <div id="staffMemoModalError" style="color: #ff0000; margin-bottom: 10px; display: none;"></div>
+            <div>
+                <select id="memoType" style="width: 100%; box-sizing: border-box;">
+                    <option value="" selected></option>
+                    <option value="priority">Priority</option>
+                </select>
+                <textarea id="memoContent" placeholder="Note" style="width: 100%; box-sizing: border-box;"></textarea>
+                <button onclick="submitStaffMemo()">Add Note</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="viewStaffMemosModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 1000;">
+        <div style="height: 100%; display: flex; align-items: center; justify-content: center;">
+            <div class="modal-content" style="width: 800px; height: 600px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px;">
+                    <h2 style="margin: 0; flex: 1; color: #fff;">Staff Notes</h2>
+                    <button onclick="switchToAddMemo()" style="background: #753B3B; color: #fff; border: 1px solid #333; padding: 4px 12px; border-radius: 3px; cursor: pointer; font-size: inherit; font-family: inherit; position: absolute; left: 50%; transform: translateX(-50%);">New Note</button>
+                    <span class="modal-close" onclick="closeViewStaffMemosModal()" style="color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 20px;">&times;</span>
+                </div>
+                <div id="memosList" style="height: calc(100% - 70px); overflow-y: auto; padding: 0 10px;">
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function formatDate(timestamp) {
+            const date = new Date(timestamp * 1000);
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const month = months[date.getMonth()];
+            const day = date.getDate();
+            const suffix = ['th', 'st', 'nd', 'rd'][(day % 10 > 3) ? 0 : (day % 100 - day % 10 != 10) * (day % 10)];
+            
+            // For paste creation timestamp (used in the sidebar), only show date
+            if (document.querySelector('.info-group .value')) {
+                return `${month} ${day}${suffix}, ${year}`;
+            }
+            
+            // For other timestamps, include the time
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            return `${month} ${day}${suffix}, ${year} ${hours}:${minutes}`;
+        }
+
+        function togglePin() {
+            const pasteID = '51803';
+            const action = 'pinned' === 'pinned' ? '0' : '1';
+            fetch(`/api/pinPaste?pasteID=${pasteID}&action=${action}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    }
+                });
+        }
+
+        function toggleComments() {
+            const pasteID = '51803';
+            const action = '0' === '1' ? '0' : '1';
+            fetch(`/api/disablePasteFeature?pasteID=${pasteID}&action=${action}&disable=comments`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    }
+                });
+        }
+
+        function toggleEdits() {
+            const pasteID = '51803';
+            const action = '1' === '1' ? '0' : '1';
+            fetch(`/api/disablePasteFeature?pasteID=${pasteID}&action=${action}&disable=edits`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    }
+                });
+        }
+
+        function formatCommentDate(timestamp) {
+            return timestamp;
+        }
+
+        document.querySelectorAll('.comment-date').forEach(el => {
+            const timestamp = el.textContent.trim();
+            if (/^\d+$/.test(timestamp)) {
+                el.textContent = timestamp;
+            }
+        });
+
+        const createdElement = document.querySelector('.info-row:nth-child(2) .value');
+        if (createdElement) {
+            const timestamp = parseInt(createdElement.dataset.timestamp);
+            if (!isNaN(timestamp)) {
+                createdElement.textContent = timestamp;
+            }
+        }
+
+        function makeLinksClickable() {
+            const pre = document.querySelector('.content-area pre');
+            if (!pre) return;
+
+            const content = pre.innerHTML;
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            pre.innerHTML = content.replace(urlRegex, url => `<a href="${sanitize(url)}" target="_blank">${url}</a>`);
+        }
+
+        document.addEventListener('DOMContentLoaded', makeLinksClickable);
+
+        const submitButton = document.getElementById('submit-comment');
+        if (submitButton) {
+            submitButton.addEventListener('click', async function() {
+                const commentInput = document.getElementById('comment-input');
+                const errorDiv = document.getElementById('comment-error');
+                const content = commentInput.value.trim();
+                const pasteID = '51803';
+
+                if (!content) {
+                    errorDiv.textContent = 'Please enter a comment';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+
+                try {
+                    const turnstileToken = document.querySelector('[name="cf-turnstile-response"]').value;
+                    const response = await fetch(`/api/addComment?pasteID=${pasteID}&content=${encodeURIComponent(content)}&cf-turnstile-response=${turnstileToken}`, { method: 'POST' });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        commentInput.value = '';
+                        errorDiv.style.display = 'none';
+
+                        // Update comment count in the sidebar
+                        const commentCountElement = document.querySelector('.comment-count');
+                        if (commentCountElement) {
+                            const currentCount = parseInt(commentCountElement.textContent) || 0;
+                            commentCountElement.textContent = currentCount + 1;
+                        }
+
+                        const commentsContainer = document.getElementById('comments-container');
+                        const newComment = document.createElement('div');
+                        newComment.className = 'comment';
+                        newComment.setAttribute('data-comment-id', data.comment.commentID);
+                        newComment.innerHTML = `
+                            <div class="comment-meta">
+                                <span>
+                                    ${data.comment.username ? 
+                                        data.comment.rankStyle ? 
+                                            `<span style="${data.comment.rankStyle}">
+                                                ${data.comment.usernameColor ? 
+                                                    `<span style="color: ${data.comment.usernameColor}"><a href="/user/${data.comment.username}" style="color: inherit;">${data.comment.username}</a></span>` 
+                                                    : `<a href="/user/${data.comment.username}" style="color: inherit;">${data.comment.username}</a>`}
+                                                ${data.comment.suffix ? ` ${data.comment.suffix}` : ''}
+                                            </span>`
+                                            : `<span style="color: #fff"><a href="/user/${data.comment.username}" style="color: inherit;">${data.comment.username}</a>${data.comment.suffix ? ` ${data.comment.suffix}` : ''}</span>`
+                                        : '<span style="color: #fff">Anonymous</span>'} - 
+                                    <span class="comment-date">${formatCommentDate(data.comment.createdAt)}</span>
+                                </span>
+                                
+                            </div>
+                            <div class="comment-content">${data.comment.content}</div>
+                        `;
+
+                        // Add the new comment at the top of the comments container
+                        if (commentsContainer.firstChild) {
+                            commentsContainer.insertBefore(newComment, commentsContainer.firstChild);
+                        } else {
+                            commentsContainer.appendChild(newComment);
+                        }
+
+                        // Set up hide/show links for the new comment
+                        setupHideShowLinks();
+
+                        // Reset turnstile
+                        turnstile.reset();
+                    } else {
+                        errorDiv.textContent = data.error || 'Failed to add comment';
+                        errorDiv.style.display = 'block';
+                        turnstile.reset();
+                    }
+                } catch (error) {
+                    if (!data?.success) {
+                        errorDiv.textContent = 'Failed to add comment';
+                        errorDiv.style.display = 'block';
+                        turnstile.reset();
+                    }
+                }
+            });
+        }
+
+        const toggleButton = document.querySelector('.toggle-sidebar');
+        const sidebar = document.querySelector('.sidebar');
+        
+        toggleButton.addEventListener('click', function() {
+            sidebar.classList.toggle('hidden');
+            if (sidebar.classList.contains('hidden')) {
+                toggleButton.style.right = '0';
+            } else {
+                toggleButton.style.right = '304px';
+            }
+        });
+
+        let currentPasteId = '51803';
+        let isSealed = false;
+        const pasteType = 'pinned';
+        
+        function showHideModal() {
+            document.getElementById('hideModal').style.display = 'block';
+            document.getElementById('hideModalError').style.display = 'none';
+            document.getElementById('hide-dropdown').value = '';
+            document.getElementById('hide-reason').value = '';
+            document.getElementById('notifyUser').checked = false;
+        }
+
+        function closeHideModal() {
+            document.getElementById('hideModal').style.display = 'none';
+        }
+
+        function updateReasonInput() {
+            const dropdown = document.getElementById('hide-dropdown');
+            const reason = document.getElementById('hide-reason');
+            reason.value = dropdown.value;
+        }
+
+        function updateButton(sealed) {
+            const sealButton = document.querySelector('button.seal-button');
+            if (!sealButton) return;
+            
+            sealButton.textContent = sealed ? 'Unseal' : 'Seal';
+            const newButton = sealButton.cloneNode(true);
+            sealButton.parentNode.replaceChild(newButton, sealButton);
+            
+            newButton.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (sealed) {
+                    unsealPaste();
+                } else {
+                    showHideModal();
+                }
+            };
+            isSealed = sealed;
+        }
+
+        async function submitHideForm() {
+            if (isSealed) return;
+            
+            const reason = document.getElementById('hide-reason').value.trim();
+            const notify = document.getElementById('notifyUser').checked;
+            const errorDiv = document.getElementById('hideModalError');
+            
+            let url = `/api/managePasteType?action=seal&pasteID=${currentPasteId}`;
+            if (reason) {
+                url += `&reason=${encodeURIComponent(reason)}`;
+            }
+            url += `&notify=${notify}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.success) {
+                    closeHideModal();
+                    updateButton(true);
+					window.location.reload();
+                } else {
+                    errorDiv.textContent = data.error || 'Failed to seal paste';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'An error occurred';
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        async function unsealPaste() {
+            if (!isSealed) return;
+            
+            try {
+                const response = await fetch(`/api/managePasteType?action=unseal&pasteID=${currentPasteId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    updateButton(false);
+					window.location.reload();
+                }
+            } catch (error) {
+                console.error('Failed to unseal paste:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateButton(isSealed);
+        });
+
+        function showFlagModal() {
+            document.getElementById('flagModal').style.display = 'block';
+            document.getElementById('flag-dropdown').value = '';
+            document.getElementById('flag-reason').value = '';
+            document.getElementById('flagModalError').style.display = 'none';
+        }
+
+        function closeFlagModal() {
+            document.getElementById('flagModal').style.display = 'none';
+        }
+
+        function updateFlagReason() {
+            const dropdown = document.getElementById('flag-dropdown');
+            const reasonInput = document.getElementById('flag-reason');
+            reasonInput.value = dropdown.value;
+        }
+
+        function submitFlagForm() {
+            const reason = document.getElementById('flag-reason').value.trim();
+            let url = `/api/flagPaste?pasteID=51803`;
+            
+            if (reason) {
+                url += `&reason=${encodeURIComponent(reason)}`;
+            }
+
+            fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+					window.location.reload();
+                } else {
+                    const errorDiv = document.getElementById('flagModalError');
+                    errorDiv.textContent = data.error || 'Failed to flag paste';
+                    errorDiv.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                const errorDiv = document.getElementById('flagModalError');
+                errorDiv.textContent = 'An error occurred while flagging the paste';
+                errorDiv.style.display = 'block';
+            });
+        }
+
+        function setupHideShowLinks() {
+            document.querySelectorAll('.hide-show-link').forEach(link => {
+                if (!link.hasAttribute('data-initialized')) {
+                    link.setAttribute('data-initialized', 'true');
+                    link.addEventListener('click', async function() {
+                        const currentText = this.textContent;
+                        const action = currentText === 'Hide' ? '1' : '0';
+                        const commentElement = this.closest('.comment');
+                        const commentID = commentElement.getAttribute('data-comment-id');
+
+                        try {
+                            const response = await fetch(`/api/hideComment?commentID=${commentID}&action=${action}`);
+                            const data = await response.json();
+
+                            if (data.success) {
+                                this.textContent = action === '1' ? 'Show' : 'Hide';
+                            }
+                        } catch (error) {
+                            console.error('Error toggling comment visibility:', error);
+                        }
+                    });
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupHideShowLinks();
+
+            const thumbsUp = document.querySelector('.reaction-button:first-child');
+            const thumbsDown = document.querySelector('.reaction-button:last-child');
+            
+            thumbsUp.addEventListener('click', () => addReaction(1));
+            thumbsDown.addEventListener('click', () => addReaction(0));
+        });
+
+        async function addReaction(reactionType) {
+            try {
+                const response = await fetch(`/api/addReaction?pasteID=51803&reactionType=${reactionType}`);
+                const data = await response.json();
+                
+                if (data.error === 'UNAUTHENTICATED') {
+                    window.location.href = '/login';
+                    return;
+                }
+
+                if (data.success) {
+                    const thumbsUp = document.querySelector('.reaction-button:first-child');
+                    const thumbsDown = document.querySelector('.reaction-button:last-child');
+                    thumbsUp.innerHTML = `<i class="fas fa-thumbs-up"></i> ${data.likes}`;
+                    thumbsDown.innerHTML = `<i class="fas fa-thumbs-down"></i> ${data.dislikes}`;
+                }
+            } catch (error) {
+                console.error('Error adding reaction:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupHideShowLinks();
+
+            const thumbsUp = document.querySelector('.reaction-button:first-child');
+            const thumbsDown = document.querySelector('.reaction-button:last-child');
+
+            const settingsIcon = document.querySelector('.settings-icon');
+            const sidebarContent = document.querySelector('.sidebar-content');
+            const settingsContent = document.querySelector('.settings-content');
+            
+            if (settingsIcon) {
+                settingsIcon.addEventListener('click', function() {
+                    if (sidebarContent.classList.contains('hidden')) {
+                        sidebarContent.classList.remove('hidden');
+                        settingsContent.classList.remove('visible');
+                    } else {
+                        sidebarContent.classList.add('hidden');
+                        settingsContent.classList.add('visible');
+                    }
+                });
+            }
+
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.addedNodes.length) {
+                        mutation.addedNodes.forEach(function(node) {
+                            if (node.nodeType === 1) {
+                                const commentDates = node.querySelectorAll('.comment-date');
+                                commentDates.forEach(el => {
+                                    const timestamp = el.textContent.trim();
+                                    if (/^\d+$/.test(timestamp)) {
+                                        el.textContent = timestamp;
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            observer.observe(document.getElementById('comments-container'), { childList: true, subtree: true });
+        });
+
+        let paste_memos = [];
+
+        function deleteMemo(memoId) {
+            fetch(`/api/deletePasteMemo?memoID=${memoId}`, {
+                method: 'GET',
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove from local data
+                    paste_memos = paste_memos.filter(memo => memo.memoID !== memoId);
+                    showViewStaffMemosModal(); // Refresh the current view
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function showStaffMemoModal() {
+            document.getElementById('addStaffMemoModal').style.display = 'flex';
+            document.getElementById('staffMemoModalError').style.display = 'none';
+            document.getElementById('memoContent').value = '';
+            document.getElementById('memoType').value = '';
+        }
+
+        function closeStaffMemoModal() {
+            document.getElementById('addStaffMemoModal').style.display = 'none';
+        }
+
+        async function submitStaffMemo() {
+            const type = document.getElementById('memoType').value;
+            const value = document.getElementById('memoContent').value.trim();
+            const errorDiv = document.getElementById('staffMemoModalError');
+            
+            if (!value) {
+                errorDiv.textContent = 'Memo cannot be blank!';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            fetch(`/api/addPasteMemo?pasteID=51803&type=${encodeURIComponent(type)}&value=${encodeURIComponent(value)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        closeStaffMemoModal();
+                        window.location.reload();
+                    } else {
+                        errorDiv.textContent = data.error || 'Failed to add memo';
+                        errorDiv.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    errorDiv.textContent = 'An error occurred while adding the memo';
+                    errorDiv.style.display = 'block';
+                });
+        }
+
+        function showViewStaffMemosModal() {
+            const memosList = document.getElementById('memosList');
+            memosList.innerHTML = '';
+            
+            const memos = paste_memos;
+            memos.sort((a, b) => {
+                if (a.type === 'priority' && b.type !== 'priority') return -1;
+                if (a.type !== 'priority' && b.type === 'priority') return 1;
+                return b.createdAt - a.createdAt;
+            });
+
+            memos.forEach(memo => {
+                const memoDiv = document.createElement('div');
+                memoDiv.style.cssText = 'background: #282828; border-radius: 2px; padding: 12px; margin-bottom: 10px;';
+                
+                const headerDiv = document.createElement('div');
+                headerDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;';
+                
+                const leftSide = document.createElement('div');
+                leftSide.style.cssText = 'display: flex; align-items: center;';
+                
+                const userLink = document.createElement('a');
+                userLink.href = memo.username ? `/user/${memo.username}` : '/';
+                userLink.style.cssText = 'color: inherit; text-decoration: none;';
+                userLink.onmouseover = () => userLink.style.textDecoration = 'underline';
+                userLink.onmouseout = () => userLink.style.textDecoration = 'none';
+                
+                const username = document.createElement('span');
+                username.style.cssText = memo.rankStyle;
+                
+                if (!memo.username) {
+                    const systemName = document.createElement('span');
+                    systemName.style.cssText = 'color: #ff0000; font-weight: bold;';
+                    systemName.textContent = 'Doxbin';
+                    username.appendChild(systemName);
+                } else {
+                    if (memo.usernameColor) {
+                        const coloredUsername = document.createElement('span');
+                        coloredUsername.style.color = memo.usernameColor;
+                        coloredUsername.textContent = memo.username;
+                        username.appendChild(coloredUsername);
+                    } else {
+                        username.textContent = memo.username;
+                    }
+                    username.appendChild(document.createTextNode(' ' + memo.suffix));
+                }
+                
+                userLink.appendChild(username);
+                leftSide.appendChild(userLink);
+                
+                const timestamp = document.createElement('span');
+                timestamp.style.cssText = 'color: #666; margin-left: 10px;';
+                timestamp.textContent = memo.createdAt;
+
+                leftSide.appendChild(timestamp);
+
+                if (false.rank === 'admin' || false.rank === 'manager') {
+                    const deleteBtn = document.createElement('span');
+                    deleteBtn.style.cssText = 'color: #ff0000; margin-left: 10px; cursor: pointer;';
+                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.onmouseover = () => deleteBtn.style.textDecoration = 'underline';
+                    deleteBtn.onmouseout = () => deleteBtn.style.textDecoration = 'none';
+                    deleteBtn.onclick = () => deleteMemo(memo.memoID);
+                    leftSide.appendChild(deleteBtn);
+                }
+
+                headerDiv.appendChild(leftSide);
+                
+                if (memo.type === 'priority') {
+                    const priority = document.createElement('span');
+                    priority.style.cssText = 'color: #ff0000;';
+                    priority.textContent = '[Priority]';
+                    headerDiv.appendChild(priority);
+                }
+                
+                const content = document.createElement('div');
+                content.style.cssText = 'white-space: pre-wrap; color: #fff; font-size: 13px; line-height: 1.4;';
+                content.textContent = memo.value;
+                
+                memoDiv.appendChild(headerDiv);
+                memoDiv.appendChild(content);
+                memosList.appendChild(memoDiv);
+            });
+            
+            document.getElementById('viewStaffMemosModal').style.display = 'block';
+        }
+
+        function closeViewStaffMemosModal() {
+            document.getElementById('viewStaffMemosModal').style.display = 'none';
+        }
+
+        function switchToAddMemo() {
+            closeViewStaffMemosModal();
+            showStaffMemoModal();
+        }
+
+        function formatDate(timestamp) {
+            const date = new Date(timestamp * 1000);
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const day = date.getDate();
+            const suffix = (day) => {
+                if (day > 3 && day < 21) return 'th';
+                switch (day % 10) {
+                    case 1: return 'st';
+                    case 2: return 'nd';
+                    case 3: return 'rd';
+                    default: return 'th';
+                }
+            };
+            const pad = (n) => n < 10 ? '0' + n : n;
+            return `${months[date.getMonth()]} ${day}${suffix(day)}, ${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        }
+
+        function savePasteSettings() {
+            const password = document.getElementById('paste-password')?.value || '';
+            const visibility = document.querySelector('input[name="visibility"]:checked')?.value || 'public';
+            const pasteID = '51803';
+
+            const url = `/api/editPasteVisibility?pasteID=${pasteID}&type=${visibility}&password=${encodeURIComponent(password)}`;
+
+            fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    const errorDiv = document.getElementById('settings-error');
+                    errorDiv.textContent = data.error || 'Failed to update paste settings';
+                    errorDiv.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                const errorDiv = document.getElementById('settings-error');
+                errorDiv.textContent = 'An error occurred while saving settings';
+                errorDiv.style.display = 'block';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add event listeners here
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,216 @@
+body {
+    background: #060606;
+    margin: 0;
+    padding-top: 48px;
+}
+
+nav {
+    background: #060606;
+    padding: 0;
+    margin: 0;
+    height: 48px;
+    line-height: 48px;
+    border-bottom: 1px solid #282828;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+}
+
+nav .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 22.5px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.nav-brand a {
+	display: flex;
+    color: #fff;
+    font-size: 19px;
+    text-decoration: none;
+}
+
+.nav-wrapper {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    margin-left: 20px;
+}
+
+.nav-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.nav-auth {
+    display: flex;
+    align-items: center;
+    margin-left: 13.5px;
+}
+
+.nav-auth li {
+    list-style: none;
+    display: inline-flex;
+    height: 48px;
+    line-height: 48px;
+}
+
+.nav-menu li a, .nav-auth li a, .nav-btn {
+    color: #888;
+    text-decoration: none;
+    padding: 0 13.5px;
+    font-size: 13.5px;
+    display: inline-block;
+    height: 48px;
+    line-height: 48px;
+    letter-spacing: 0.2px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.nav-menu li a:hover, .nav-auth li a:hover, .nav-btn:hover {
+    color: #fff;
+    text-decoration: none;
+}
+
+/* Active page */
+.nav-menu li.active a {
+    color: #fff;
+}
+
+.navbar-toggler {
+    display: none;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    padding: 0;
+    cursor: pointer;
+    outline: none;
+}
+
+@media (max-width: 1000px) {
+    .navbar-toggler {
+        display: block;
+    }
+    
+    .nav-wrapper {
+        display: none;
+        position: fixed;
+        top: 48px;
+        left: 0;
+        right: 0;
+        background: #060606;
+        margin: 0;
+        padding: 0;
+        height: auto;
+        border-bottom: 1px solid #282828;
+        flex-direction: column;
+        z-index: 999;
+    }
+    
+    .nav-wrapper.show {
+        display: block;
+    }
+    
+    .nav-menu {
+        display: block;
+        height: auto;
+        margin: 0;
+    }
+    
+    .nav-auth {
+        display: block;
+        margin: 0;
+    }
+    
+    .nav-menu li, .nav-auth li {
+        display: block;
+        height: 40px;
+        line-height: 40px;
+        border-top: 1px solid #282828;
+    }
+    
+    .nav-menu li a, .nav-auth li a, .nav-btn {
+        width: 100%;
+        padding: 0 22.5px;
+        height: 40px;
+        line-height: 40px;
+        text-align: left;
+    }
+}
+
+html {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+    display: none;
+}
+
+body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+body::-webkit-scrollbar {
+    display: none;
+}
+
+.mobile-only {
+    display: none !important;
+}
+
+@media (max-width: 1000px) {
+    .mobile-only {
+        display: block !important;
+    }
+    .desktop-only {
+        display: none !important;
+    }
+    .nav-wrapper {
+        display: none;
+        position: fixed;
+        top: 48px;
+        left: 0;
+        right: 0;
+        background: #060606;
+        z-index: 1000;
+    }
+    .nav-wrapper.show {
+        display: block;
+    }
+    .nav-menu {
+        flex-direction: column;
+        margin: 0;
+        padding: 0;
+    }
+    .nav-menu li {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+    .nav-menu a, .nav-btn {
+        width: 100%;
+        display: block;
+        padding: 10px;
+        text-align: left;
+    }
+    .nav-auth {
+        margin: 0;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

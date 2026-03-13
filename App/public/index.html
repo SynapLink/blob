@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:,">
+    <title>Home | Pastebin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/css/nav.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <div class="nav-brand">
+                <a href="/">Pastebin</a>
+            </div>
+            <button class="navbar-toggler" type="button" aria-label="Toggle navigation">
+                ☰
+            </button>
+            <div class="nav-wrapper">
+                <ul class="nav-menu">
+                    <li class="active"><a href="/">Home</a></li>
+                    <li><a href="/upload.html">Add Paste</a></li>
+                </ul>
+                <div class="nav-auth" id="auth-section">
+                    <li><button id="login-btn" class="nav-btn">Login with GitHub</button></li>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="logo-container">
+        <!-- ASCII Logo -->
+        <pre class="ascii-art" style="color: #fff; font-family: monospace; white-space: pre; font-size: 14px; text-align: center; margin-top: 20px;">
+  ____            _     _       
+ |  _ \  _____  _| |__ (_)_ __  
+ | | | |/ _ \ \/ / '_ \| | '_ \ 
+ | |_| | (_) >  <| |_) | | | | |
+ |____/ \___/_/\_\_.__/|_|_| |_|
+        </pre>
+    </div>
+    
+    <div class="search-container">
+        <label class="search-label">SEARCH FOR A PASTE</label>
+        <div class="search-form">
+            <input type="text" id="searchInput" class="search-box" placeholder="Search Title...">
+            <button id="searchBtn" class="search-button">Search</button>
+        </div>
+    </div>
+
+    <div class="all-pastes" style="margin-top: 20px;">
+        <table id="pastesTable">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Size</th>
+                    <th>Date</th>
+                    <th>Encrypted</th>
+                </tr>
+            </thead>
+            <tbody id="pastesBody">
+                <tr><td colspan="5" style="text-align: center; padding: 20px; color: #888;">Loading pastes...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script src="/js/config.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        document.querySelector('.navbar-toggler').addEventListener('click', function() {
+            document.querySelector('.nav-wrapper').classList.toggle('show');
+        });
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            initApp();
+            fetchRecentPastes();
+        });
+    </script>
+</body>
+</html>

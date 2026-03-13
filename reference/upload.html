@@ -1,0 +1,582 @@
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:,">
+    <title>Upload | Doxbin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/nav.css">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.min.js"></script>
+    <script>setInterval(() => fetch('/api/fetchStatus').catch(() => {}), 30000);</script>
+    
+    <style>
+		input {
+			outline: none !important;
+			box-shadow: none !important;
+		}
+
+		input:focus {
+			outline: none !important;
+			box-shadow: none !important;
+		}
+
+		*:focus {
+			outline: none !important;
+			box-shadow: none !important;
+		}
+
+		input, textarea, select {
+			font-size: 16px !important;
+		}
+
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        html {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        }
+
+        .verification-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        body.modal-open {
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        body.modal-open .verification-modal {
+            pointer-events: all;
+        }
+
+        .verification-content {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 2rem;
+            border-radius: 0;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .verification-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .verification-buttons button {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            border-radius: 0;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .verification-buttons button:hover {
+            opacity: 1;
+        }
+
+        .approve-btn {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .deny-btn {
+            background: #f44336;
+            color: white;
+        }
+    </style>
+
+    <div class="verification-modal">
+        <div class="verification-content">
+            <h2 style="margin-bottom: 1rem;">Account Verification</h2>
+            <p>Are you requesting access to your account?</p>
+            <div class="verification-buttons">
+                <button class="approve-btn" onclick="handleVerification(true)">Approve</button>
+                <button class="deny-btn" onclick="handleVerification(false)">Deny</button>
+            </div>
+        </div>
+    </div>
+
+	
+
+    <script>
+        document.addEventListener('mouseover', function(e) {
+            e.stopPropagation();
+        }, true);
+    </script>
+
+    <script>
+        function sanitize(input) {
+            return input
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#x27;')
+                .replace(/\//g, '&#x2F;');
+        }
+
+        const originalSetAttribute = Element.prototype.setAttribute;
+        Element.prototype.setAttribute = function(name, value) {
+            if (name === 'href') {
+                value = sanitize(value);
+            }
+            originalSetAttribute.call(this, name, value);
+        };
+    </script>
+
+    <script>
+        let currentVerificationId = null;
+
+        async function handleVerification(status) {
+            if (!currentVerificationId) return;
+            
+            try {
+                const response = await fetch(`/api/submitVerificationPrompt?verificationID=${currentVerificationId}&status=${status}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.querySelector('.verification-modal').style.display = 'none';
+                    currentVerificationId = null;
+                }
+            } catch (error) {
+                console.error('Failed to process verification:', error);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const socket = io({
+                path: '/gateway',
+                transports: ['websocket'],
+                upgrade: false,
+                withCredentials: true,
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                reconnectionAttempts: Infinity
+            });
+
+            socket.onAny((eventName, data) => {
+                if (eventName === 'refresh_page') window.location.reload();
+                if (eventName === 'online') {
+                    const onlineCounts = document.querySelectorAll('.online-count');
+                    onlineCounts.forEach(count => {
+                        count.textContent = data;
+                        count.style.display = 'flex';
+                        count.classList.add('connected');
+                    });
+                }
+                if (eventName === 'ping') {
+                    socket.emit('pong');
+                }
+                
+            });
+            window.socket = socket;
+        });
+    </script>
+    
+</head>
+<body class="bin">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        .upload-container {
+            display: flex;
+            height: 100vh;
+        }
+        .text-area {
+            flex: 1;
+            background: #0C0C0C;
+            position: relative;
+        }
+        .text-area textarea {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-family: monospace;
+            font-size: 13px;
+            resize: none;
+            padding: 10px 20px;
+            margin: 0;
+            margin-top: 10px;
+            white-space: pre;
+            tab-size: 4;
+            -moz-tab-size: 4;
+            word-wrap: break-word;
+        }
+        .text-area textarea:focus {
+            outline: none;
+        }
+        .sidebar {
+            width: 280px;
+            background: #181818;
+            padding: 10px 12px;
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            transition: transform 0.3s ease;
+            text-align: center;
+        }
+        .sidebar.hidden {
+            transform: translateX(100%);
+        }
+        .toggle-sidebar {
+            position: fixed;
+            right: 304px;
+            top: 0;
+            background: #181818;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 18px;
+            z-index: 1000;
+            padding: 6px 10px;
+            border-radius: 0;
+            transition: right 0.3s ease;
+        }
+        .toggle-sidebar:hover {
+            background: #222;
+        }
+        .ascii-art {
+            color: #fff;
+            font-family: monospace;
+            white-space: pre;
+            font-size: 14px;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            margin-top: 0;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .form-group label {
+            display: block;
+            color: #fff;
+            margin-bottom: 5px;
+            font-size: 13px;
+            text-align: center;
+        }
+        .username-field {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin-bottom: 5px;
+        }
+        .username-field span {
+            color: #fff;
+            font-size: 13px;
+        }
+        .username-field a {
+            color: #888;
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .username-field a:hover {
+            text-decoration: underline;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="password"] {
+            width: 100%;
+            background: #545454;
+            border: 1px solid #282828;
+            padding: 8px 12px;
+            color: #fff;
+            font-size: 13px;
+            border-radius: 3px;
+        }
+        .form-group input::placeholder {
+            color: #bfbfbf;
+        }
+        .form-group input[type="text"]:focus,
+        .form-group input[type="password"]:focus {
+            outline: none;
+        }
+        .form-group small {
+            display: block;
+            color: #888;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+        .notify-followers {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 0 2px;
+        }
+        .notify-followers label {
+            color: #fff;
+            font-size: 13px;
+            margin-bottom: 0;
+        }
+        .visibility-options {
+            margin: 15px 0;
+            color: #fff;
+        }
+        .visibility-options label {
+            display: block;
+            margin-bottom: 8px;
+        }
+        .visibility-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            padding: 0 2px;
+        }
+        .visibility-option label {
+            margin-bottom: 0;
+            font-size: 13px;
+        }
+        input[type="radio"], 
+        input[type="checkbox"] {
+            margin: 0;
+        }
+        .button {
+            width: 100%;
+            background: #545454;
+            border: 1px solid #282828;
+            color: #fff;
+            padding: 8px 0;
+            cursor: pointer;
+            font-size: 13px;
+            border-radius: 3px;
+            margin-bottom: 0;
+            transition: all 0.2s;
+        }
+        .button:hover {
+            background: #666;
+        }
+        .tos-note {
+            color: #fff;
+            font-size: 13px;
+            margin-top: 15px;
+            text-align: center;
+        }
+        .tos-note a {
+            color: #888;
+            text-decoration: none;
+        }
+        .tos-note a:hover {
+            text-decoration: underline;
+        }
+        .separator {
+            border-top: 2px solid #747474;
+            margin: 15px 0;
+        }
+        *:focus {
+            outline: none !important;
+        }
+        input[type="radio"]:checked,
+        input[type="checkbox"]:checked {
+            accent-color: #ff0000;
+        }
+        .cf-turnstile {
+            margin: 15px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .sidebar a {
+            color: #888;
+            text-decoration: none;
+        }
+        .sidebar a:hover {
+            text-decoration: underline;
+        }
+        .error-message {
+            color: #ff0000;
+            margin: 10px 0;
+            font-size: 13px;
+            text-align: center;
+        }
+        @keyframes breathe {
+            0% { background: rgba(255, 215, 0, 0.05); }
+            50% { background: rgba(255, 215, 0, 0.15); }
+            100% { background: rgba(255, 215, 0, 0.05); }
+        }
+        .premium-upgrade {
+            animation: breathe 2s ease-in-out infinite;
+            transition: all 0.3s ease;
+            text-decoration: none !important;
+        }
+        .premium-upgrade:hover {
+            background: rgba(255, 215, 0, 0.2) !important;
+            text-decoration: none !important;
+        }
+    </style>
+
+    <div class="upload-container">
+        <div class="text-area">
+            <textarea name="content" spellcheck="false"></textarea>
+        </div>
+        <button class="toggle-sidebar">☰</button>
+        <div class="sidebar">
+            <a href="/" style="text-decoration: none;">
+                <div class="ascii-art">  ____            _     _       
+ |  _ \  _____  _| |__ (_)_ __  
+ | | | |/ _ \ \/ / '_ \| | '_ \ 
+ | |_| | (_) >  <| |_) | | | | |
+ |____/ \___/_/\_\_.__/|_|_| |_|</div>
+            </a>
+            <div class="error-message"></div>
+            <form id="uploadForm" onsubmit="submitPaste(event)">
+                <div class="form-group">
+                    <div class="username-field">
+                        
+                            <span><a href="/login">Login</a> or <a href="/register">register</a> to manage your pastes.</span>
+                        
+                    </div>
+                </div>
+
+                
+
+                <div class="form-group">
+                    <label><strong>Title:</strong></label>
+                    <input type="text" name="title" placeholder="Paste title (no special chars)">
+                </div>
+
+                <div class="separator"></div>
+
+                
+
+                
+                <input type="hidden" name="visibility" value="public">
+                
+
+                
+
+                <div class="cf-turnstile" data-sitekey="0x4AAAAAAA7KBtIohquuvBr0"></div>
+
+                <button type="submit" class="button">Create</button>
+
+                <div class="separator"></div>
+
+                <div class="tos-note">
+                    Please note that all posted information is publicly available and must follow our <a href="/tos">TOS</a>.
+                </div>
+				<div class="separator"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        async function submitPaste(e) {
+            e.preventDefault();
+            
+            const form = document.getElementById('uploadForm');
+            const errorDiv = document.querySelector('.error-message');
+            
+            const title = form.querySelector('input[name="title"]').value.trim();
+            const content = document.querySelector('textarea[name="content"]').value;
+            const password = form.querySelector('input[name="password"]')?.value.trim() || '';
+            const notifyCheckbox = form.querySelector('input[name="notify_followers"]');
+            const notifyFollowers = notifyCheckbox ? notifyCheckbox.checked : false;
+            
+            let visibility = 'public';
+            const visibilityInputs = form.querySelectorAll('input[name="visibility"]');
+            if (visibilityInputs.length > 0) {
+                for (const input of visibilityInputs) {
+                    if (input.checked) {
+                        visibility = input.value;
+                        break;
+                    }
+                }
+            }
+
+            const turnstileResponse = turnstile.getResponse();
+            
+            const postData = {
+                content,
+                type: visibility,
+                'cf-turnstile-response': turnstileResponse,
+                notify_followers: notifyFollowers
+            };
+
+            if (password) {
+                postData.password = password;
+            }
+
+            try {
+                const response = await fetch(`/api/uploadPaste?title=${encodeURIComponent(title)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(postData)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    errorDiv.textContent = data.error || 'An error occurred while creating the paste';
+                    if (data.error && data.error.includes('Captcha')) {
+                        turnstile.reset();
+                    }
+                    return;
+                }
+
+                if (data.success && data.redirect) {
+                    window.location.href = data.redirect;
+                } else {
+                    errorDiv.textContent = 'An error occurred while creating the paste';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'An error occurred while creating the paste';
+                turnstile.reset();
+            }
+        }
+
+        const toggleButton = document.querySelector('.toggle-sidebar');
+        const sidebar = document.querySelector('.sidebar');
+        
+        toggleButton.addEventListener('click', function() {
+            sidebar.classList.toggle('hidden');
+            if (sidebar.classList.contains('hidden')) {
+                toggleButton.style.right = '0';
+            } else {
+                toggleButton.style.right = '304px';
+            }
+        });
+
+        document.querySelector('.text-area textarea').addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                
+                var start = this.selectionStart;
+                var end = this.selectionEnd;
+                
+                this.value = this.value.substring(0, start) + '\t' + this.value.substring(end);
+                
+                this.selectionStart = this.selectionEnd = start + 1;
+            }
+        });
+    </script>
+</body>
+</html>

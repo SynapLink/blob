@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:,">
+    <title>Home | Doxbin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/nav.css">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.min.js"></script>
+    <script>setInterval(() => fetch('/api/fetchStatus').catch(() => {}), 30000);</script>
+    
+    <style>
+		input {
+			outline: none !important;
+			box-shadow: none !important;
+		}
+
+		input:focus {
+			outline: none !important;
+			box-shadow: none !important;
+		}
+
+		*:focus {
+			outline: none !important;
+			box-shadow: none !important;
+		}
+
+		input, textarea, select {
+			font-size: 16px !important;
+		}
+
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        html {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        }
+
+        .verification-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        body.modal-open {
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        body.modal-open .verification-modal {
+            pointer-events: all;
+        }
+
+        .verification-content {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 2rem;
+            border-radius: 0;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .verification-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .verification-buttons button {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            border-radius: 0;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .verification-buttons button:hover {
+            opacity: 1;
+        }
+
+        .approve-btn {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .deny-btn {
+            background: #f44336;
+            color: white;
+        }
+    </style>
+
+    <div class="verification-modal">
+        <div class="verification-content">
+            <h2 style="margin-bottom: 1rem;">Account Verification</h2>
+            <p>Are you requesting access to your account?</p>
+            <div class="verification-buttons">
+                <button class="approve-btn" onclick="handleVerification(true)">Approve</button>
+                <button class="deny-btn" onclick="handleVerification(false)">Deny</button>
+            </div>
+        </div>
+    </div>
+
+	
+
+    <script>
+        document.addEventListener('mouseover', function(e) {
+            e.stopPropagation();
+        }, true);
+    </script>
+
+    <script>
+        function sanitize(input) {
+            return input
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#x27;')
+                .replace(/\//g, '&#x2F;');
+        }
+
+        const originalSetAttribute = Element.prototype.setAttribute;
+        Element.prototype.setAttribute = function(name, value) {
+            if (name === 'href') {
+                value = sanitize(value);
+            }
+            originalSetAttribute.call(this, name, value);
+        };
+    </script>
+
+    <script>
+        let currentVerificationId = null;
+
+        async function handleVerification(status) {
+            if (!currentVerificationId) return;
+            
+            try {
+                const response = await fetch(`/api/submitVerificationPrompt?verificationID=${currentVerificationId}&status=${status}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.querySelector('.verification-modal').style.display = 'none';
+                    currentVerificationId = null;
+                }
+            } catch (error) {
+                console.error('Failed to process verification:', error);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const socket = io({
+                path: '/gateway',
+                transports: ['websocket'],
+                upgrade: false,
+                withCredentials: true,
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                reconnectionAttempts: Infinity
+            });
+
+            socket.onAny((eventName, data) => {
+                if (eventName === 'refresh_page') window.location.reload();
+                if (eventName === 'online') {
+                    const onlineCounts = document.querySelectorAll('.online-count');
+                    onlineCounts.forEach(count => {
+                        count.textContent = data;
+                        count.style.display = 'flex';
+                        count.classList.add('connected');
+                    });
+                }
+                if (eventName === 'ping') {
+                    socket.emit('pong');
+                }
+                
+            });
+            window.socket = socket;
+        });
+    </script>
+    
+</head>
+    <style>
+        .search-container {
+            text-align: center;
+            margin: 10px 0 0 0;
+        }
+        .search-label {
+            color: #888888;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .search-form {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+        }
+        .search-box {
+            background: #282828;
+            border: none;
+            outline: none;
+            color: white;
+            padding: 5px 10px;
+            width: 240px;
+            height: 32px;
+            box-sizing: border-box;
+        }
+        .search-box::placeholder {
+            color: #878787;
+        }
+        .search-box:focus {
+            outline: none;
+        }
+        .search-button {
+            background: #282828;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            cursor: pointer;
+            height: 32px;
+            box-sizing: border-box;
+            font-size: 13px;
+        }
+        .pagination {
+            text-align: center;
+            margin: 10px 0;
+            color: white;
+            display: inline-flex;
+            justify-content: center;
+            position: relative;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 13px;
+        }
+        .pagination a {
+            color: #FFFFFF;
+            text-decoration: none;
+            padding: 3px 8px;
+            min-width: 15px;
+            display: inline-block;
+            transition: all 0.2s ease;
+            border: 1px solid #878787;
+            margin-left: -1px;
+        }
+        .pagination a:first-child {
+            border-radius: 3px 0 0 3px;
+            margin-left: 0;
+        }
+        .pagination a:last-child {
+            border-radius: 0 3px 3px 0;
+        }
+        .pagination a:hover {
+            color: white;
+        }
+        .pagination a.active {
+            color: white;
+            background: #181818;
+            border: 1px solid #878787;
+            position: relative;
+        }
+        .pinned-pastes {
+            width: 75%;
+            max-width: 1100px;
+            margin: 10px auto 25px;
+            color: white;
+        }
+        .pinned-pastes h2 {
+            color: white;
+            margin: 10px 0;
+            padding: 0;
+            font-weight: normal;
+            font-size: 16px;
+        }
+        .pinned-pastes table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #080808;
+            font-size: 14px;
+        }
+        .pinned-pastes th {
+            padding: 8px;
+            text-align: left;
+            background: #181818;
+            font-weight: bold;
+            border: none;
+            border-bottom: 1px solid #333;
+        }
+        .pinned-pastes th:not(:first-child) {
+            text-align: center;
+        }
+        .pinned-pastes td {
+            padding: 9px;
+            border: none;
+            border-bottom: 1px solid #333;
+        }
+        .pinned-pastes td:not(:first-child) {
+            text-align: center;
+        }
+        .pinned-pastes tr {
+            background: #080808;
+        }
+        .pinned-pastes tr[data-highlight] {
+            background: attr(data-highlight);
+        }
+        .pinned-pastes a {
+            color: inherit;
+            text-decoration: none;
+        }
+        .pinned-pastes a:hover {
+            text-decoration: underline;
+        }
+        .all-pastes {
+            width: 75%;
+            max-width: 1100px;
+            margin: 0 auto 20px;
+            color: white;
+        }
+        .all-pastes table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .all-pastes th {
+            padding: 8px;
+            text-align: left;
+            background: #181818;
+            font-weight: bold;
+            border: none;
+            border-bottom: 1px solid #333;
+        }
+        .all-pastes th:not(:first-child) {
+            text-align: center;
+        }
+        .all-pastes td {
+            padding: 9px;
+            border: none;
+            border-bottom: 1px solid #333;
+        }
+        .all-pastes td:not(:first-child) {
+            text-align: center;
+        }
+        .all-pastes tr {
+            background: #181818;
+        }
+        .all-pastes tr:nth-child(even) {
+            background: #080808;
+        }
+        .all-pastes a {
+            color: inherit;
+            text-decoration: none;
+        }
+        .all-pastes a:hover {
+            text-decoration: underline;
+        }
+        /* Common table column widths */
+        .pinned-pastes td:first-child,
+        .pinned-pastes th:first-child,
+        .all-pastes td:first-child,
+        .all-pastes th:first-child {
+            width: 35%;
+        }
+        .pinned-pastes td:nth-child(2),
+        .pinned-pastes th:nth-child(2),
+        .all-pastes td:nth-child(2),
+        .all-pastes th:nth-child(2) {
+            width: 10%;
+        }
+        .pinned-pastes td:nth-child(3),
+        .pinned-pastes th:nth-child(3),
+        .all-pastes td:nth-child(3),
+        .all-pastes th:nth-child(3) {
+            width: 10%;
+        }
+        .pinned-pastes td:nth-child(4),
+        .pinned-pastes th:nth-child(4),
+        .all-pastes td:nth-child(4),
+        .all-pastes th:nth-child(4) {
+            width: 20%;
+        }
+        .pinned-pastes td:nth-child(5),
+        .pinned-pastes th:nth-child(5),
+        .all-pastes td:nth-child(5),
+        .all-pastes th:nth-child(5) {
+            width: 15%;
+        }
+        .pinned-pastes td:nth-child(6),
+        .pinned-pastes th:nth-child(6),
+        .all-pastes td:nth-child(6),
+        .all-pastes th:nth-child(6) {
+            width: 10%;
+            color: #ff0000;
+        }
+        .showing-text {
+            color: #888888;
+            text-align: center;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        .showing-text span {
+            color: #666;
+        }
+        /* Logo styles */
+        .logo-container {
+            text-align: center;
+            margin: 10px 0 0 0;
+        }
+        .logo-container img {
+            max-width: 300px;
+            height: auto;
+        }
+        @media screen and (max-width: 480px) {
+            .logo-container img {
+                max-width: 200px;
+            }
+        }
+        /* Announcements styles */
+        .announcements {
+            text-align: center;
+            margin: 10px 0;
+        }
+        .announcement {
+            margin: 10px 0;
+            font-size: 17px;
+            font-weight: bold;
+        }
+		.announcement a {
+			text-decoration: inherit;
+		}
+		.announcement a:hover {
+			text-decoration: underline;
+		}
+        @media screen and (max-width: 1024px) {
+            .pinned-pastes {
+                width: 90%;
+            }
+            .all-pastes {
+                width: 90%;
+            }
+        }
+        @media screen and (max-width: 768px) {
+            .pinned-pastes {
+                width: 95%;
+            }
+            .pinned-pastes table {
+                font-size: 13px;
+            }
+            .all-pastes {
+                width: 95%;
+            }
+            .all-pastes table {
+                font-size: 13px;
+            }
+            /* Hide Comments, Views, and Actions columns */
+            .pinned-pastes td:nth-child(2),
+            .pinned-pastes th:nth-child(2),
+            .all-pastes td:nth-child(2),
+            .all-pastes th:nth-child(2),
+            .pinned-pastes td:nth-child(3),
+            .pinned-pastes th:nth-child(3),
+            .all-pastes td:nth-child(3),
+            .all-pastes th:nth-child(3),
+            .pinned-pastes td:nth-child(6),
+            .pinned-pastes th:nth-child(6),
+            .all-pastes td:nth-child(6),
+            .all-pastes th:nth-child(6) {
+                display: none;
+            }
+            /* Adjust remaining columns */
+            .pinned-pastes td:first-child,
+            .pinned-pastes th:first-child,
+            .all-pastes td:first-child,
+            .all-pastes th:first-child {
+                width: 45%;
+            }
+            .pinned-pastes td:nth-child(4),
+            .pinned-pastes th:nth-child(4),
+            .all-pastes td:nth-child(4),
+            .all-pastes th:nth-child(4) {
+                width: 30%;
+            }
+            .pinned-pastes td:nth-child(5),
+            .pinned-pastes th:nth-child(5),
+            .all-pastes td:nth-child(5),
+            .all-pastes th:nth-child(5) {
+                width: 25%;
+            }
+        }
+        @media screen and (max-width: 480px) {
+            .pinned-pastes {
+                width: 100%;
+                margin: 20px 5px;
+            }
+            .pinned-pastes table {
+                font-size: 12px;
+                table-layout: fixed;
+            }
+            .all-pastes {
+                width: 100%;
+                margin: 20px 5px;
+            }
+            .all-pastes table {
+                font-size: 12px;
+                table-layout: fixed;
+            }
+            .search-box {
+                width: 180px;
+            }
+            /* Adjust padding for better mobile view */
+            .pinned-pastes td,
+            .pinned-pastes th,
+            .all-pastes td,
+            .all-pastes th {
+                padding: 6px 4px;
+            }
+            /* Further adjust column widths for mobile */
+            .pinned-pastes td:first-child,
+            .pinned-pastes th:first-child,
+            .all-pastes td:first-child,
+            .all-pastes th:first-child {
+                width: 45%;
+                max-width: 120px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .pinned-pastes td:first-child a,
+            .all-pastes td:first-child a {
+                display: block;
+                width: 100%;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .pinned-pastes td:nth-child(4),
+            .pinned-pastes th:nth-child(4),
+            .all-pastes td:nth-child(4),
+            .all-pastes th:nth-child(4) {
+                width: 30%;
+            }
+            .pinned-pastes td:nth-child(5),
+            .pinned-pastes th:nth-child(5),
+            .all-pastes td:nth-child(5),
+            .all-pastes th:nth-child(5) {
+                width: 25%;
+            }
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #888888;
+            font-style: italic;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #111;
+            padding: 20px;
+            border: 1px solid #333;
+            width: 80%;
+            max-width: 500px;
+            position: relative;
+            color: #fff;
+        }
+        .modal-close {
+            color: #666;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal-close:hover {
+            color: #999;
+        }
+        input[type="checkbox"]:checked {
+            accent-color: #ff0000;
+        }
+    </style>
+</head>
+<body>
+    <link rel="stylesheet" href="/static/nav.css">
+<nav>
+    <div class="container">
+        <div class="nav-brand">
+            <a href="/">Doxbin</a>
+            <div class="online-count mobile-only" style="display: none;">0</div>
+        </div>
+        <button class="navbar-toggler" type="button">
+            ☰
+        </button>
+        <div class="nav-wrapper">
+            <ul class="nav-menu">
+                <li class="active"><a href="/home">Home</a></li>
+                
+                <li ><a href="/upload">Add Paste</a></li>
+                
+                <li ><a href="/users">Users</a></li>
+                <li ><a href="/upgrades">Upgrades</a></li>
+                <li ><a href="/hoa">Hall of Autism</a></li>
+                <li><a href="/support">Help</a></li>
+                
+            </ul>
+            
+            <style>
+                .online-count {
+                    display: flex;
+                    align-items: center;
+                    color: #00ff00;
+                    font-size: 12px;
+                }
+                .online-count::before {
+                    content: '';
+                    display: inline-block;
+                    width: 6px;
+                    height: 6px;
+                    background: #00ff00;
+                    border-radius: 50%;
+                    margin-right: 6px;
+                    animation: pulse 2s infinite;
+                    box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7);
+                }
+                @keyframes pulse {
+                    0% {
+                        box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7);
+                    }
+                    70% {
+                        box-shadow: 0 0 0 6px rgba(0, 255, 0, 0);
+                    }
+                    100% {
+                        box-shadow: 0 0 0 0 rgba(0, 255, 0, 0);
+                    }
+                }
+                .mobile-only {
+                    display: none !important;
+                }
+                @media (max-width: 1000px) {
+                    .nav-brand {
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                    }
+                    .mobile-only.online-count {
+                        display: none !important;
+                    }
+                    .mobile-only.online-count.connected {
+                        display: flex !important;
+                        margin-left: 0px;
+                        font-size: 12px;
+                    }
+                    .mobile-only.online-count::before {
+                        width: 6px;
+                        height: 6px;
+                        margin-right: 6px;
+                    }
+                    .desktop-only {
+                        display: none !important;
+                    }
+                }
+            </style>
+            <div class="online-count desktop-only" style="display: none;">0</div>
+            <div class="nav-auth">
+                
+                    <li ><a href="/login">Login</a></li>
+                    <li ><a href="/register">Register</a></li>
+                
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div id="notification-modal" style="display: none;"></div>
+
+<style>
+#notifications-container {
+    max-height: 400px;
+    overflow-y: auto;
+    background: #000000;
+}
+#notifications-container > div {
+    padding: 4px 15px;
+    border-bottom: 1px solid #282828;
+    background: #000000;
+}
+.notification-message {
+    white-space: normal;
+    word-break: break-word;
+    display: block;
+    font-size: 13px;
+    line-height: 16px;
+}
+.notification-message a {
+    color: #2A9FD6 !important;
+    text-decoration: none !important;
+    display: inline;
+}
+.notification-message a:hover {
+    color: #2A9FD6 !important;
+    text-decoration: underline !important;
+}
+#notifications-container::-webkit-scrollbar {
+    width: 8px !important;
+}
+#notifications-container::-webkit-scrollbar-track {
+    background: #060606 !important;
+}
+#notifications-container::-webkit-scrollbar-thumb {
+    background: #282828 !important;
+    border-radius: 4px !important;
+}
+#notifications-container::-webkit-scrollbar-thumb:hover {
+    background: #333 !important;
+}
+#notification-dropdown {
+    border-radius: 4px;
+}
+#notification-dropdown::before {
+    display: none;
+}
+.notification-highlight {
+    background: rgba(255, 255, 0, 0.1) !important;
+}
+</style>
+
+<script>
+document.querySelector('.navbar-toggler').addEventListener('click', function() {
+    document.querySelector('.nav-wrapper').classList.toggle('show');
+});
+
+let currentNotifications = [];
+let modalOpen = false;
+let lastSeenTimestamp = 0;
+let initialUnreadIds = new Set();
+
+function toggleNotifications(event) {
+    event.preventDefault();
+    const dropdown = document.getElementById('notification-dropdown');
+    modalOpen = !modalOpen;
+    
+    if (modalOpen) {
+        dropdown.style.display = 'block';
+        lastSeenTimestamp = Math.floor(Date.now() / 1000);
+        
+        initialUnreadIds = new Set(
+            currentNotifications
+                .filter(n => n.status === 'unread')
+                .map(n => n.createdAt)
+        );
+        
+        updateNotificationsDisplay();
+        
+        fetch('/api/readNotifications')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentNotifications.forEach(n => n.status = 'seen');
+                    const countElement = document.getElementById('notification-count');
+                    if (countElement) {
+                        countElement.style.display = 'none';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Failed to mark notifications as read:', error);
+            });
+    } else {
+        dropdown.style.display = 'none';
+        lastSeenTimestamp = 0;
+        initialUnreadIds.clear();
+    }
+}
+
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('notification-dropdown');
+    const notificationIcon = document.querySelector('.notification-icon');
+    
+    if (modalOpen && !dropdown.contains(event.target) && !notificationIcon.contains(event.target)) {
+        modalOpen = false;
+        dropdown.style.display = 'none';
+        lastSeenTimestamp = 0;
+        initialUnreadIds.clear();
+    }
+});
+
+function updateNotificationsDisplay() {
+    const container = document.getElementById('notifications-container');
+    
+    if (currentNotifications.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 10px; color: #666;">No notifications.</div>';
+        return;
+    }
+    
+    container.innerHTML = currentNotifications.map(notification => {
+        const shouldHighlight = initialUnreadIds.has(notification.createdAt) || notification.createdAt >= lastSeenTimestamp;
+        const highlightClass = shouldHighlight ? 'notification-highlight' : '';
+        return `<div class="${highlightClass}" style="padding: 8px 15px;"><span class="notification-message" style="color: #B0B0B0">${notification.message}</span></div>`;
+    }).join('');
+}
+
+function updateNotificationCount() {
+    const countElement = document.getElementById('notification-count');
+    const unreadCount = 0;
+    
+    if (unreadCount > 0) {
+        countElement.style.display = 'block';
+        countElement.textContent = unreadCount;
+    } else {
+        countElement.style.display = 'none';
+    }
+    
+    if (modalOpen) {
+        updateNotificationsDisplay();
+    }
+}
+
+if (document.querySelector('.notification-icon')) {
+    updateNotificationCount();
+}
+
+const dropdown = document.querySelector('.dropdown');
+if (dropdown) {
+    dropdown.querySelector('.dropdown-toggle').addEventListener('click', function(e) {
+        e.stopPropagation();
+        dropdown.classList.toggle('active');
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!dropdown.contains(e.target)) {
+            dropdown.classList.remove('active');
+        }
+    });
+}
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const lastCount = localStorage.getItem('lastOnlineCount');
+    if (lastCount) {
+        document.querySelectorAll('.online-count').forEach(count => {
+            count.textContent = lastCount;
+            count.classList.add('connected');
+            count.style.display = 'flex';
+        });
+    }
+
+    document.querySelectorAll('.online-count').forEach(count => {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (count.textContent && count.textContent !== '0') {
+                    localStorage.setItem('lastOnlineCount', count.textContent);
+                }
+            });
+        });
+        observer.observe(count, { characterData: true, childList: true, subtree: true });
+    });
+});
+</script>
+
+    <div class="logo-container">
+        <img src="/static/logo.jpg" alt="Doxbin">
+    </div>
+
+    
+
+    
+    <div class="announcements">
+        
+            <div class="announcement" style="color: #ffffff">
+                <a href="https://t.me/dprdchannel" target="_blank" style="color:#FF69B4; text-decoration:underline;font-size:22px;">NEW DOXBIN TELEGRAM</a>
+            </div>
+        
+    </div>
+    
+
+    <div class="search-container">
+        <label class="search-label">Search for a paste</label>
+        
+        <form class="search-form">
+            <input type="text" class="search-box" placeholder="Search for...">
+            <button type="submit" class="search-button">Search</button>
+        </form>
+    </div>
+
+    <div class="showing-text">
+        Showing 100 (of  total) pastes
+    </div>
+
+    <div class="pagination">
+        <a href="javascript:void(0)" onclick="changePage(Math.max(1, currentPage - 1))">&lt;</a>
+        <a href="javascript:void(0)" class="active">1</a>
+        <a href="javascript:void(0)">2</a>
+        <a href="javascript:void(0)">3</a>
+        <a href="javascript:void(0)">4</a>
+        <a href="javascript:void(0)">5</a>
+        <a href="javascript:void(0)" onclick="changePage(Math.min(totalPages, currentPage + 1))">&gt;</a>
+    </div>
+
+    <div class="pinned-pastes">
+        <h2>Pinned Pastes</h2>
+        <table id="pinnedTable">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Comments</th>
+                    <th>Views</th>
+                    <th>Created by</th>
+                    <th>Added</th>
+                    
+                </tr>
+            </thead>
+            <tbody>
+                
+                <tr data-paste-id="771342" data-rank-color="#2b200d" style="background-color: #2b200d">
+                    <td><a href="/upload/Jakethescammer">Jake the scammer</a></td>
+                    <td>—</td>
+                    <td>820</td>
+                    <td>
+                        
+                        <a href="/user/asuna" style="color: #FFD700; font-weight: bold; background-image: url(&#39;/static/gold.gif&#39;);">
+                            <span style="color: #FFFFFF">asuna</span>
+                            [Rich]
+                        </a>
+                        
+                    </td>
+                    <td>Mar 13, 2026</td>
+                    
+                </tr>
+                
+                <tr data-paste-id="751041" data-rank-color="" >
+                    <td><a href="/upload/NCSCUKundercoveragents">NCSC UK undercover agents</a></td>
+                    <td>425</td>
+                    <td>21601</td>
+                    <td>
+                        
+                        Anonymous
+                        
+                    </td>
+                    <td>Jan 8, 2026</td>
+                    
+                </tr>
+                
+                <tr data-paste-id="51803" data-rank-color="#3D0606" style="background-color: #3D0606">
+                    <td><a href="/upload/HowtoEnsureYourDoxStaysUp">How to Ensure Your Paste Stays Up</a></td>
+                    <td>—</td>
+                    <td>266090</td>
+                    <td>
+                        
+                        <a href="/user/Admin" style="color: #ff0000; font-weight: bold; background-image: url(&#39;/static/red.gif&#39;);">
+                            <span >Admin</span>
+                            [Admin]
+                        </a>
+                        
+                    </td>
+                    <td>Nov 20, 2020</td>
+                    
+                </tr>
+                
+                <tr data-paste-id="25105" data-rank-color="#1a0d2b" style="background-color: #1a0d2b">
+                    <td><a href="/upload/DoxbinTransparencyReport">Transparency Report</a></td>
+                    <td>—</td>
+                    <td>160020</td>
+                    <td>
+                        
+                        <a href="/user/month" style="color: #bb71e4; font-weight: bold; background-image: url(&#39;/static/purple.gif&#39;);">
+                            <span style="color: #BB71E4">month</span>
+                            [Manager]
+                        </a>
+                        
+                    </td>
+                    <td>Jun 20, 2020</td>
+                    
+                </tr>
+                
+            </tbody>
+        </table>
+    </div>
+
+    <div class="all-pastes">
+        <table id="allPastesTable">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Comments</th>
+                    <th>Views</th>
+                    <th>Created by</th>
+                    <th>Added</th>
+                    
+                </tr>
+            </thead>
+            <tbody id="allPastesBody">
+                <tr>
+                    <td colspan="5" class="loading">Loading pastes...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pagination" id="bottomPagination"></div>
+    <div class="showing-text" id="bottomShowingText" style="margin-top: 0px !important; margin-bottom: 25px !important; text-align: center !important;"></div>
+
+    <div id="hideModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeHideModal()">&times;</span>
+            <h2 style="margin-top: 0; margin-bottom: 20px;">Seal Paste</h2>
+            <div id="hideModalError" style="color: #ff0000; margin-bottom: 10px; display: none;"></div>
+            <div>
+                <select id="hide-dropdown" style="background: #282828; border: 0; border-radius: 2px; display: inline-block; -webkit-font-smoothing: antialiased; outline: none; padding: 7px 5px; width: 100%; color: white; margin-bottom: 10px; font-size: inherit; font-family: inherit;" onchange="updateReasonInput()">
+                    <option value="" selected></option>
+                    <option value="Insufficient info - Read TOS">Insufficient</option>
+                    <option value="Contains info on a minor under 15 - Read TOS">Underage</option>
+                    <option value="Spam - Read TOS">Spam / Irrelevant</option>
+                    <option value="Threats - Read TOS">Threats</option>
+                    <option value="Contains explicit imagery of a minor. Do not reupload.">CP</option>
+                    <option value="Contains a lack of information. Please provide more information.">Lack of effort</option>
+                </select>
+                <textarea id="hide-reason" placeholder="Reason" style="width: calc(100% - 10px); background: #282828; border: 0; border-radius: 2px; color: white; padding: 7px 5px; margin-bottom: 10px; height: 60px; resize: none; outline: none; font-size: inherit; font-family: inherit;"></textarea>
+                <div style="margin-bottom: 15px;">
+                    <input type="checkbox" id="notifyUser" style="margin-right: 5px;">
+                    <label for="notifyUser" style="font-size: inherit;">Notify user</label>
+                </div>
+                <button onclick="submitHideForm()" style="background: #222; color: #fff; border: 1px solid #333; padding: 8px 16px; border-radius: 3px; cursor: pointer; font-size: inherit; font-family: inherit;">Seal</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('.timestamp').forEach(el => {
+            const timestamp = parseInt(el.dataset.time);
+            el.textContent = timestamp;
+        });
+
+        function truncateTitle(title) {
+            return title.length > 47 ? title.substring(0, 47) + '...' : title;
+        }
+
+        let currentPage = 1;
+        let currentSearch = '';
+        
+        async function fetchPastes(page = 1, search = '') {
+            try {
+                const tbody = document.getElementById('allPastesBody');
+                const bottomPagination = document.getElementById('bottomPagination');
+                const bottomShowingText = document.getElementById('bottomShowingText');
+                
+                bottomPagination.style.display = 'none';
+                bottomShowingText.style.display = 'none';
+                
+                const isAdmin = false;
+                const colspan = isAdmin ? 6 : 5;
+                tbody.innerHTML = `<tr><td colspan="${colspan}" class="loading">Loading pastes...</td></tr>`;
+                
+                let url = `/api/fetchPastes?page=${page}`;
+                if (search) {
+                    url += `&search=${encodeURIComponent(search)}`;
+                    
+                    url += '&searchType=title';
+                    
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.error === "Rate limit exceeded" && data.success === false) {
+                    tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center; color: #ff0000;">You are being rate limited.</td></tr>`;
+                    return;
+                }
+                
+                tbody.innerHTML = '';
+                
+                const paginationHtml = `
+                    <a href="javascript:void(0)" onclick="changePage(${Math.max(1, page - 1)})">&lt;</a>
+                    ${generatePaginationLinks(page, data.totalPages)}
+                    <a href="javascript:void(0)" onclick="changePage(${Math.min(data.totalPages, page + 1)})">&gt;</a>
+                `;
+                
+                document.querySelector('.pagination').innerHTML = paginationHtml;
+                bottomPagination.innerHTML = paginationHtml;
+                bottomPagination.style.display = 'inline-flex';
+                
+                const showingText = `Showing ${data.pastes.length} (of ${data.total} total) pastes`;
+                document.querySelector('.showing-text').textContent = showingText;
+                bottomShowingText.textContent = showingText;
+                bottomShowingText.style.display = 'block';
+                
+                data.pastes.forEach(paste => {
+                    const tr = document.createElement('tr');
+                    tr.setAttribute('data-paste-id', paste.id);
+                    tr.setAttribute('data-rank-color', paste.rankHighlightColor || '');
+                    if (paste.type === 'sealed') {
+                        tr.style.backgroundColor = '#421414';
+                    } else if (paste.rankHighlightColor) {
+                        tr.style.backgroundColor = paste.rankHighlightColor;
+                    }
+                    
+                    tr.innerHTML = `
+                        <td><a href="/upload/${paste.link}">
+                            ${paste.password ? '<i class="fas fa-lock" style="margin-right: 5px;"></i>' : 
+                             paste.type === 'private' ? '<i class="fas fa-shield-alt" style="margin-right: 5px;"></i>' : 
+                             paste.type === 'unlisted' ? '<i class="fas fa-eye-slash" style="margin-right: 5px;"></i>' : ''}
+                            ${paste.type === 'pinned' ? '<i class="fas fa-thumbtack" style="margin-right: 5px;"></i>' : ''}
+                            ${truncateTitle(paste.title)}</a></td>
+                        <td>${paste.comments}</td>
+                        <td>${paste.views}</td>
+                        <td>
+                            ${paste.author ? `
+                                <a href="/user/${paste.author}" ${paste.rankStyle ? `style="${paste.rankStyle}"` : 'style="color: #2A9FD6"'}>
+                                    <span ${paste.usernameColor ? `style="color: ${paste.usernameColor}"` : ''}>${paste.author}</span>
+                                    ${paste.rankSuffix ? paste.rankSuffix : ''}
+                                </a>
+                            ` : 'Anonymous'}
+                        </td>
+                        <td>${paste.created_at}</td>
+                        ${isAdmin ? 
+                            `<td style="color: #ff0000;">${paste.type === 'sealed' ? 
+                                `<a href="javascript:void(0)" style="color: #ff0000;" onclick="unsealPaste('${paste.id}', this)">Unseal</a>` :
+                                `<a href="javascript:void(0)" style="color: #ff0000;" onclick="showHideModal('${paste.id}', this)">Seal</a>`
+                            }</td>` : 
+                            ''
+                        }
+                    `;
+                    
+                    tbody.appendChild(tr);
+                });
+
+                document.querySelector('.showing-text').textContent = 
+                    `Showing ${data.pastes.length} (of ${data.total} total) pastes`;
+
+                document.querySelectorAll('.pinned-pastes td:first-child a').forEach(a => {
+                    a.textContent = truncateTitle(a.textContent);
+                });
+            } catch (error) {
+                console.error('Error fetching pastes:', error);
+            }
+        }
+
+        function generatePaginationLinks(current, total) {
+            let links = '';
+            let start = Math.max(1, current - 2);
+            let end = Math.min(total, start + 4);
+            
+            if (end - start < 4) {
+                start = Math.max(1, end - 4);
+            }
+            
+            for (let i = start; i <= end; i++) {
+                links += `<a href="javascript:void(0)" onclick="changePage(${i})" ${i === current ? 'class="active"' : ''}>${i}</a>`;
+            }
+            return links;
+        }
+
+        async function changePage(page) {
+            currentPage = page;
+            await fetchPastes(currentPage, currentSearch);
+        }
+
+        const searchForm = document.querySelector('.search-form');
+        const searchInput = document.querySelector('.search-box');
+
+        searchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            currentSearch = searchInput.value;
+            currentPage = 1;
+            await fetchPastes(currentPage, currentSearch);
+        });
+
+        fetchPastes();
+    </script>
+
+    <script>
+        let currentPasteId = null;
+        let currentRow = null;
+
+        function showHideModal(pasteId, element) {
+            currentPasteId = pasteId;
+            currentRow = element.closest('tr');
+            const modal = document.getElementById('hideModal');
+            modal.classList.add('show');
+            document.getElementById('hide-dropdown').value = '';
+            document.getElementById('hide-reason').value = '';
+            document.getElementById('notifyUser').checked = false;
+            document.getElementById('hideModalError').style.display = 'none';
+        }
+
+        function closeHideModal() {
+            const modal = document.getElementById('hideModal');
+            modal.classList.remove('show');
+            currentPasteId = null;
+            currentRow = null;
+            document.getElementById('hideModalError').style.display = 'none';
+        }
+
+        function updateReasonInput() {
+            const select = document.getElementById('hide-dropdown');
+            const input = document.getElementById('hide-reason');
+            input.value = select.value;
+        }
+
+        async function submitHideForm() {
+            const errorDiv = document.getElementById('hideModalError');
+            errorDiv.style.display = 'none';
+
+            const reason = document.getElementById('hide-reason').value.trim();
+            const notify = document.getElementById('notifyUser').checked;
+            const isPinned = currentRow.closest('table').id === 'pinnedTable';
+
+            let url = `/api/managePasteType?action=seal&pasteID=${currentPasteId}`;
+            if (reason) {
+                url += `&reason=${encodeURIComponent(reason)}`;
+            }
+            url += `&notify=${notify}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.success) {
+                    if (isPinned) {
+                        currentRow.remove();
+                    } else {
+                        currentRow.style.backgroundColor = '#421414';
+                        const actionCell = currentRow.querySelector('td:last-child');
+                        actionCell.innerHTML = `<a href="javascript:void(0)" style="color: #ff0000;" onclick="unsealPaste('${currentPasteId}', this)">Unseal</a>`;
+                    }
+                    closeHideModal();
+                } else {
+                    errorDiv.textContent = data.error || 'Failed to seal paste';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                errorDiv.textContent = 'An error occurred while sealing the paste';
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        async function unsealPaste(pasteId, element) {
+            try {
+                const response = await fetch(`/api/managePasteType?action=unseal&pasteID=${pasteId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const row = element.closest('tr');
+                    const rankColor = row.getAttribute('data-rank-color') || '';
+                    row.style.backgroundColor = rankColor;
+                    const actionCell = row.querySelector('td:last-child');
+                    actionCell.innerHTML = `<a href="javascript:void(0)" style="color: #ff0000;" onclick="showHideModal('${pasteId}', this)">Seal</a>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('hideModal');
+            if (event.target == modal) {
+                closeHideModal();
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:,">
+    <title>Upload | Pastebin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/css/nav.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="bin">
+    <div class="upload-container">
+        <div class="text-area">
+            <textarea id="pasteContent" name="content" spellcheck="false" placeholder="Enter your text here..."></textarea>
+        </div>
+        <button class="toggle-sidebar" id="toggleSidebar">☰</button>
+        <div class="sidebar" id="sidebar">
+            <a href="/" style="text-decoration: none;">
+                <div class="ascii-art">  ____            _     _       
+ |  _ \  _____  _| |__ (_)_ __  
+ | | | |/ _ \ \/ / '_ \| | '_ \ 
+ | |_| | (_) >  <| |_) | | | | |
+ |____/ \___/_/\_\_.__/|_|_| |_|</div>
+            </a>
+            
+            <div id="error-message" style="color: #ff0000; margin-bottom: 10px; font-size: 13px;"></div>
+            <div id="success-message" style="color: #00ff00; margin-bottom: 10px; font-size: 13px;"></div>
+
+            <div class="form-group" id="authContainer">
+                <div class="username-field">
+                    <span>You must <a href="#" id="loginLink">Login</a> to create pastes.</span>
+                </div>
+            </div>
+
+            <div id="uploadFormContainer" style="display: none;">
+                <div class="user-section" id="userInfo">
+                    Logged in as: <strong id="githubUsername"></strong> (<a href="#" id="logoutLink">Logout</a>)
+                </div>
+
+                <div class="separator"></div>
+
+                <div class="form-group">
+                    <label><strong>Filename (Optional):</strong></label>
+                    <input type="text" id="pasteFilename" placeholder="e.g. dump.txt">
+                    <small style="display:block; color:#888; font-size:12px; margin-top:4px;">Will use random ID if blank</small>
+                </div>
+
+                <div class="separator"></div>
+                
+                <div style="text-align: left; margin-bottom: 10px; color: #fff; font-size: 13px; display: flex; align-items: center; justify-content: space-between; padding: 0 4px;">
+                    <label style="margin: 0; cursor: pointer;" for="encryptCheckbox">Encrypt paste with password</label>
+                    <input type="checkbox" id="encryptCheckbox" style="cursor: pointer; transform: scale(1.1);">
+                </div>
+
+                <div class="form-group" id="passwordGroup" style="display: none;">
+                    <input type="password" id="pastePassword" placeholder="Encryption Password">
+                    <small style="display:block; color:#ffaa00; font-size:12px; margin-top:4px;">If you forget this, the data is lost forever.</small>
+                </div>
+
+                <div class="separator"></div>
+
+                <button id="createBtn" class="button">Create Paste</button>
+            </div>
+            
+            <div class="separator"></div>
+        </div>
+    </div>
+
+    <script src="/js/config.js"></script>
+    <script src="/js/crypto.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            initApp();
+            
+            // Upload specific logic
+            const toggleButton = document.getElementById('toggleSidebar');
+            const sidebar = document.getElementById('sidebar');
+            
+            toggleButton.addEventListener('click', function() {
+                sidebar.classList.toggle('hidden');
+                if (sidebar.classList.contains('hidden')) {
+                    toggleButton.style.right = '0';
+                } else {
+                    toggleButton.style.right = '304px';
+                }
+            });
+
+            // Tab support in textarea
+            document.getElementById('pasteContent').addEventListener('keydown', function(e) {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    var start = this.selectionStart;
+                    var end = this.selectionEnd;
+                    this.value = this.value.substring(0, start) + '\t' + this.value.substring(end);
+                    this.selectionStart = this.selectionEnd = start + 1;
+                }
+            });
+
+            // Encryption toggle
+            const encryptCheckbox = document.getElementById('encryptCheckbox');
+            const passwordGroup = document.getElementById('passwordGroup');
+            
+            encryptCheckbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    passwordGroup.style.display = 'block';
+                } else {
+                    passwordGroup.style.display = 'none';
+                    document.getElementById('pastePassword').value = '';
+                }
+            });
+
+            // Upload action
+            document.getElementById('createBtn').addEventListener('click', async () => {
+                await handleCreatePaste();
+            });
+        });
+    </script>
+</body>
+</html>
