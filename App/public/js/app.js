@@ -89,14 +89,19 @@ function updateAuthUI(isLoggedIn) {
     if (authSection) {
         if (isLoggedIn && currentUser) {
             authSection.innerHTML = `
+                <li><span class="online-count" id="onlineCount">2184</span></li>
                 <div style="display:flex; align-items:center; gap: 10px;">
                     <img src="${currentUser.avatar_url}" style="width:24px; height:24px; border-radius:50%">
                     <span style="color:#aaa; font-size:13px">${currentUser.login}</span>
-                    <li><button class="nav-btn" onclick="logout()">Logout</button></li>
+                    <li><a href="#" id="logout-btn" onclick="logout()">Logout</a></li>
                 </div>
             `;
         } else {
-            authSection.innerHTML = `<li><button id="login-btn" class="nav-btn" onclick="handleLoginClick()">Login with GitHub</button></li>`;
+            authSection.innerHTML = `
+                <li><span class="online-count" id="onlineCount">2184</span></li>
+                <li><a href="#" id="login-btn" onclick="handleLoginClick()">Login</a></li>
+                <li><a href="#">Register</a></li>
+            `;
         }
     }
 
@@ -149,15 +154,22 @@ async function fetchRecentPastes() {
             if (file.type !== 'file') continue;
             
             // Note: GitHub doesn't return author directly in /contents. Would need to fetch commits.
-            // For performance, we'll just show the filename and size
+            // For parity with Doxbin, display random values for comments/views and "Unknown" for created by.
             
             const tr = document.createElement('tr');
+            
+            // Replicate Doxbin structure: Title, Comments, Views, Created by, Added
+            const isEncFile = file.name.endsWith('.enc');
+            const iconHTML = isEncFile ? '<i class="fas fa-lock" style="margin-right: 5px;"></i>' : '';
+            const comments = Math.floor(Math.random() * 20);
+            const views = Math.floor(Math.random() * 5000);
+            
             tr.innerHTML = `
-                <td><a href="/paste.html?id=${file.name}">${file.name}</a></td>
-                <td>Unknown</td>
-                <td>${file.size}</td>
-                <td>-</td>
-                <td>-</td>
+                <td><a href="/paste.html?id=${file.name}">${iconHTML}${file.name}</a></td>
+                <td>${comments}</td>
+                <td>${views}</td>
+                <td>Anonymous</td>
+                <td>Today</td>
             `;
             tb.appendChild(tr);
         }

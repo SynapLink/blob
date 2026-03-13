@@ -4,17 +4,73 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="data:,">
-    <title>Home | Pastebin</title>
+    <title>Home | Doxbin</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/css/nav.css">
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .pinned-pastes { width: 75%; max-width: 1100px; margin: 10px auto 25px; color: white; }
+        .pinned-pastes h2 { color: white; margin: 10px 0; padding: 0; font-weight: normal; font-size: 16px; }
+        .pinned-pastes table { width: 100%; border-collapse: collapse; background: #080808; font-size: 14px; }
+        .pinned-pastes th { padding: 8px; text-align: left; background: #181818; font-weight: bold; border: none; border-bottom: 1px solid #333; }
+        .pinned-pastes td { padding: 9px; border: none; border-bottom: 1px solid #333; }
+        .pinned-pastes td:not(:first-child), .pinned-pastes th:not(:first-child) { text-align: center; }
+        .pinned-pastes tr { background: #080808; }
+        .pinned-pastes a { color: inherit; text-decoration: none; }
+        .pinned-pastes a:hover { text-decoration: underline; }
+
+        .pinned-pastes td:first-child, .pinned-pastes th:first-child { width: 35%; }
+        .pinned-pastes td:nth-child(2), .pinned-pastes th:nth-child(2) { width: 10%; }
+        .pinned-pastes td:nth-child(3), .pinned-pastes th:nth-child(3) { width: 10%; }
+        .pinned-pastes td:nth-child(4), .pinned-pastes th:nth-child(4) { width: 20%; }
+        .pinned-pastes td:nth-child(5), .pinned-pastes th:nth-child(5) { width: 15%; }
+        .pinned-pastes td:nth-child(6), .pinned-pastes th:nth-child(6) { width: 10%; color: #ff0000; }
+
+        .announcements { text-align: center; margin: 10px 0; }
+        .announcement { margin: 10px 0; font-size: 17px; font-weight: bold; }
+        .announcement a { text-decoration: inherit; }
+        .announcement a:hover { text-decoration: underline; }
+        
+        .pagination { text-align: center; margin: 10px 0; color: white; display: inline-flex; justify-content: center; position: relative; left: 50%; transform: translateX(-50%); font-size: 13px; }
+        .pagination a { color: #FFFFFF; text-decoration: none; padding: 3px 8px; min-width: 15px; display: inline-block; transition: all 0.2s ease; border: 1px solid #878787; margin-left: -1px; }
+        .pagination a:first-child { border-radius: 3px 0 0 3px; margin-left: 0; }
+        .pagination a:last-child { border-radius: 0 3px 3px 0; }
+        .pagination a:hover { color: white; }
+        .pagination a.active { color: white; background: #181818; border: 1px solid #878787; position: relative; }
+        .showing-text { color: #888888; text-align: center; font-size: 14px; margin: 10px 0; }
+        
+        .search-container { text-align: center; margin: 10px 0 0 0; }
+        .search-label { color: #888888; font-weight: bold; display: block; margin-bottom: 5px; font-size: 14px; }
+        
+        @media screen and (max-width: 1024px) {
+            .pinned-pastes { width: 90%; }
+        }
+        @media screen and (max-width: 768px) {
+            .pinned-pastes { width: 95%; }
+            .pinned-pastes table { font-size: 13px; }
+            .pinned-pastes td:nth-child(2), .pinned-pastes th:nth-child(2),
+            .pinned-pastes td:nth-child(3), .pinned-pastes th:nth-child(3),
+            .pinned-pastes td:nth-child(6), .pinned-pastes th:nth-child(6) { display: none; }
+            .pinned-pastes td:first-child, .pinned-pastes th:first-child { width: 45%; }
+            .pinned-pastes td:nth-child(4), .pinned-pastes th:nth-child(4) { width: 30%; }
+            .pinned-pastes td:nth-child(5), .pinned-pastes th:nth-child(5) { width: 25%; }
+        }
+        @media screen and (max-width: 480px) {
+            .pinned-pastes { width: 100%; margin: 20px 5px; }
+            .pinned-pastes table { font-size: 12px; table-layout: fixed; }
+            .pinned-pastes td, .pinned-pastes th { padding: 6px 4px; }
+            .pinned-pastes td:first-child, .pinned-pastes th:first-child {
+                width: 45%; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            }
+        }
+    </style>
 </head>
 <body>
     <nav>
         <div class="container">
             <div class="nav-brand">
-                <a href="/">Pastebin</a>
+                <a href="/">Doxbin</a>
             </div>
             <button class="navbar-toggler" type="button" aria-label="Toggle navigation">
                 ☰
@@ -23,48 +79,130 @@
                 <ul class="nav-menu">
                     <li class="active"><a href="/">Home</a></li>
                     <li><a href="/upload.html">Add Paste</a></li>
+                    <li><a href="/users">Users</a></li>
+                    <li><a href="/upgrades">Upgrades</a></li>
+                    <li><a href="/hoa">Hall of Autism</a></li>
+                    <li><a href="/support">Help</a></li>
                 </ul>
                 <div class="nav-auth" id="auth-section">
-                    <li><button id="login-btn" class="nav-btn">Login with GitHub</button></li>
+                    <li><span class="online-count" id="onlineCount">2184</span></li>
+                    <li><a href="#" id="login-btn">Login</a></li>
+                    <li><a href="#">Register</a></li>
                 </div>
             </div>
         </div>
     </nav>
 
     <div class="logo-container">
-        <!-- ASCII Logo -->
-        <pre class="ascii-art" style="color: #fff; font-family: monospace; white-space: pre; font-size: 14px; text-align: center; margin-top: 20px;">
-  ____            _     _       
- |  _ \  _____  _| |__ (_)_ __  
- | | | |/ _ \ \/ / '_ \| | '_ \ 
- | |_| | (_) >  <| |_) | | | | |
- |____/ \___/_/\_\_.__/|_|_| |_|
-        </pre>
+        <!-- Direct use of doxbin logo as requested by matched styling -->
+        <img src="https://doxbin.net/static/logo.jpg" alt="Doxbin">
+    </div>
+
+    <div class="announcements">
+        <div class="announcement" style="color: #ffffff">
+            <a href="https://t.me/dprdchannel" target="_blank" style="color:#FF69B4; text-decoration:underline;font-size:22px;">NEW DOXBIN TELEGRAM</a>
+        </div>
     </div>
     
     <div class="search-container">
-        <label class="search-label">SEARCH FOR A PASTE</label>
+        <label class="search-label">Search for a paste</label>
         <div class="search-form">
-            <input type="text" id="searchInput" class="search-box" placeholder="Search Title...">
+            <input type="text" id="searchInput" class="search-box" placeholder="Search for...">
             <button id="searchBtn" class="search-button">Search</button>
         </div>
     </div>
 
-    <div class="all-pastes" style="margin-top: 20px;">
+    <div class="showing-text" id="showingTextTop">
+        Showing 0 (of 0 total) pastes
+    </div>
+
+    <div class="pagination">
+        <a href="javascript:void(0)">&lt;</a>
+        <a href="javascript:void(0)" class="active">1</a>
+        <a href="javascript:void(0)">2</a>
+        <a href="javascript:void(0)">3</a>
+        <a href="javascript:void(0)">4</a>
+        <a href="javascript:void(0)">5</a>
+        <a href="javascript:void(0)">&gt;</a>
+    </div>
+
+    <div class="pinned-pastes">
+        <h2>Pinned Pastes</h2>
+        <table id="pinnedTable">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Comments</th>
+                    <th>Views</th>
+                    <th>Created by</th>
+                    <th>Added</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Placeholder Pinned Pastes, static for visual parity -->
+                <tr data-paste-id="771342" style="background-color: #2b200d">
+                    <td><a href="#">Jake the scammer</a></td>
+                    <td>—</td>
+                    <td>820</td>
+                    <td>
+                        <a href="#" style="color: #FFD700; font-weight: bold; background-image: url('https://doxbin.net/static/gold.gif');">
+                            <span style="color: #FFFFFF">asuna</span>
+                            [Rich]
+                        </a>
+                    </td>
+                    <td>Mar 13, 2026</td>
+                </tr>
+                <tr data-paste-id="751041">
+                    <td><a href="#">NCSC UK undercover agents</a></td>
+                    <td>425</td>
+                    <td>21601</td>
+                    <td>Anonymous</td>
+                    <td>Jan 8, 2026</td>
+                </tr>
+                <tr data-paste-id="51803" style="background-color: #3D0606">
+                    <td><a href="#">How to Ensure Your Paste Stays Up</a></td>
+                    <td>—</td>
+                    <td>266090</td>
+                    <td>
+                        <a href="#" style="color: #ff0000; font-weight: bold; background-image: url('https://doxbin.net/static/red.gif');">
+                            <span>Admin</span>
+                            [Admin]
+                        </a>
+                    </td>
+                    <td>Nov 20, 2020</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="all-pastes">
         <table id="pastesTable">
             <thead>
                 <tr>
                     <th>Title</th>
-                    <th>Author</th>
-                    <th>Size</th>
-                    <th>Date</th>
-                    <th>Encrypted</th>
+                    <th>Comments</th>
+                    <th>Views</th>
+                    <th>Created by</th>
+                    <th>Added</th>
                 </tr>
             </thead>
             <tbody id="pastesBody">
                 <tr><td colspan="5" style="text-align: center; padding: 20px; color: #888;">Loading pastes...</td></tr>
             </tbody>
         </table>
+    </div>
+
+    <div class="pagination" id="bottomPagination">
+        <a href="javascript:void(0)">&lt;</a>
+        <a href="javascript:void(0)" class="active">1</a>
+        <a href="javascript:void(0)">2</a>
+        <a href="javascript:void(0)">3</a>
+        <a href="javascript:void(0)">4</a>
+        <a href="javascript:void(0)">5</a>
+        <a href="javascript:void(0)">&gt;</a>
+    </div>
+    <div class="showing-text" id="showingTextBottom" style="margin-top: 0px !important; margin-bottom: 25px !important; text-align: center !important;">
+        Showing 0 (of 0 total) pastes
     </div>
 
     <script src="/js/config.js"></script>
@@ -77,6 +215,16 @@
         // Initialize App
         document.addEventListener('DOMContentLoaded', () => {
             initApp();
+            fetchRecentPastes();
+            
+            // Override fetchRecentPastes logic to update pagination counts
+            const originalFetch = fetchRecentPastes;
+            fetchRecentPastes = async () => {
+                await originalFetch();
+                const count = document.getElementById('pastesBody').querySelectorAll('tr').length;
+                document.getElementById('showingTextTop').textContent = `Showing ${count} (of ${count} total) pastes`;
+                document.getElementById('showingTextBottom').textContent = `Showing ${count} (of ${count} total) pastes`;
+            };
             fetchRecentPastes();
         });
     </script>

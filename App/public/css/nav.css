@@ -84,6 +84,24 @@ nav .container {
     text-decoration: none;
 }
 
+.online-count {
+    color: #4CAF50;
+    font-size: 13.5px;
+    margin-right: 15px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.online-count::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background-color: #4CAF50;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
 /* Active page */
 .nav-menu li.active a {
     color: #fff;
