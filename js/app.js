@@ -68,7 +68,7 @@ async function fetchUserProfile() {
     try {
         const response = await fetch(`${GITHUB_API_URL}/user`, {
             headers: {
-                'Authorization': `token ${currentToken}`
+                'Authorization': `Bearer ${currentToken}`
             }
         });
         
@@ -249,7 +249,7 @@ async function handleCreatePaste() {
         const res = await fetch(url, {
             method: 'PUT',
             headers: {
-                'Authorization': `token ${currentToken}`,
+                'Authorization': `Bearer ${currentToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload)
